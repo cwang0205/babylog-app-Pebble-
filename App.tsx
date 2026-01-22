@@ -24,6 +24,7 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [pendingEvent, setPendingEvent] = useState<ParseResult | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [showAddBaby, setShowAddBaby] = useState(false);
   
   // Onboarding Form State
@@ -121,17 +122,43 @@ function App() {
     }
   };
 
+  const handleEditEvent = (event: BabyEvent) => {
+    setEditingEventId(event.id);
+    setPendingEvent(event);
+  };
+
+  const cancelEdit = () => {
+    setPendingEvent(null);
+    setEditingEventId(null);
+  };
+
   const saveEvent = (data: ParseResult) => {
     if (!currentBaby) return;
     
-    const newEvent: BabyEvent = {
-      id: crypto.randomUUID(),
-      babyId: currentBaby.id,
-      createdAt: new Date().toISOString(),
-      ...data
-    };
+    if (editingEventId) {
+      // Update Existing Event
+      const updatedEvent: BabyEvent = {
+        ...data as BabyEvent,
+        id: editingEventId, // Ensure ID is correct
+        babyId: currentBaby.id,
+        createdAt: events.find(e => e.id === editingEventId)?.createdAt || new Date().toISOString()
+      };
+      StorageService.updateEvent(updatedEvent);
+      setEditingEventId(null);
+    } else {
+      // Create New Event
+      // Ensure we don't accidentally pull in an ID if one exists in data
+      const { id, ...cleanData } = data as any;
+      
+      const newEvent: BabyEvent = {
+        id: crypto.randomUUID(),
+        babyId: currentBaby.id,
+        createdAt: new Date().toISOString(),
+        ...cleanData
+      };
+      StorageService.addEvent(newEvent);
+    }
     
-    StorageService.addEvent(newEvent);
     setPendingEvent(null);
     refreshEvents();
   };
@@ -331,6 +358,7 @@ function App() {
                 events={events} 
                 selectedDate={selectedDate} 
                 filterCategory={filterCategory}
+                onEditEvent={handleEditEvent}
              />
            )}
            
@@ -388,8 +416,9 @@ function App() {
       {pendingEvent && (
         <EventConfirmation 
           data={pendingEvent} 
+          mode={editingEventId ? 'edit' : 'create'}
           onConfirm={saveEvent} 
-          onCancel={() => setPendingEvent(null)} 
+          onCancel={cancelEdit} 
         />
       )}
     </div>

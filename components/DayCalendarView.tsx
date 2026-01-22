@@ -145,7 +145,10 @@ const DayCalendarView: React.FC<Props> = ({ events, selectedDate, filterCategory
             if (event.type === EventType.SLEEP && event.endTime) {
               const end = new Date(event.endTime).getTime();
               const start = startDate.getTime();
-              durationMins = Math.max(15, (end - start) / 60000);
+              // Round to nearest minute
+              durationMins = Math.round((end - start) / 60000);
+              // Ensure minimum visual height if very short
+              durationMins = Math.max(15, durationMins);
             }
             
             if (event.type !== EventType.SLEEP && durationMins > 30) {

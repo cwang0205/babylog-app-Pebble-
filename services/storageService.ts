@@ -52,6 +52,15 @@ export const StorageService = {
     localStorage.setItem(KEYS.EVENTS, JSON.stringify(allEvents));
   },
 
+  updateEvent: (updatedEvent: BabyEvent): void => {
+    const allEvents: BabyEvent[] = JSON.parse(localStorage.getItem(KEYS.EVENTS) || '[]');
+    const index = allEvents.findIndex(e => e.id === updatedEvent.id);
+    if (index !== -1) {
+      allEvents[index] = updatedEvent;
+      localStorage.setItem(KEYS.EVENTS, JSON.stringify(allEvents));
+    }
+  },
+
   deleteEvent: (eventId: string): void => {
     const allEvents: BabyEvent[] = JSON.parse(localStorage.getItem(KEYS.EVENTS) || '[]');
     const filtered = allEvents.filter(e => e.id !== eventId);

@@ -79,7 +79,8 @@ const ConsolidatedReport: React.FC<ReportProps> = ({ events, selectedDate }) => 
       } else if (e.type === EventType.SLEEP && e.endTime) {
         const start = new Date(e.startTime).getTime();
         const end = new Date(e.endTime).getTime();
-        const mins = (end - start) / 60000;
+        // Round to nearest minute to be robust against dirty data
+        const mins = Math.round((end - start) / 60000);
         
         if (isToday) metrics.today.sleep += mins;
         if (isYesterday) metrics.yesterday.sleep += mins;

@@ -3,22 +3,44 @@ import { ParseResult, EventType } from '../types';
 
 interface Props {
   data: ParseResult;
+  mode?: 'create' | 'edit';
   onConfirm: (data: ParseResult) => void;
   onCancel: () => void;
 }
 
-const EventConfirmation: React.FC<Props> = ({ data, onConfirm, onCancel }) => {
+const EventConfirmation: React.FC<Props> = ({ data, mode = 'create', onConfirm, onCancel }) => {
   const [editedData, setEditedData] = useState<ParseResult>(data);
 
   const handleChange = (field: keyof ParseResult, value: any) => {
-    setEditedData({ ...editedData, [field]: value });
+    setEditedData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleDetailsChange = (key: string, value: any) => {
-    setEditedData({
-      ...editedData,
-      details: { ...editedData.details, [key]: value }
-    });
+    setEditedData(prev => ({
+      ...prev,
+      details: { ...prev.details, [key]: value }
+    }));
+  };
+
+  // Helper: Convert UTC ISO string to "YYYY-MM-DDThh:mm" (Local Time) for input value
+  const toLocalInputString = (isoString: string | undefined | null) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    // Adjust UTC timestamp by subtracting offset to get a timestamp that matches local numbers
+    const offset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() - offset);
+    return localDate.toISOString().slice(0, 16);
+  };
+
+  // Helper: Convert Input "YYYY-MM-DDThh:mm" (Local) back to UTC ISO string
+  const handleDateChange = (field: 'startTime' | 'endTime', inputValue: string) => {
+    if (!inputValue) {
+        handleChange(field, null);
+        return;
+    }
+    // new Date(inputValue) parses it as local time in browser
+    const date = new Date(inputValue);
+    handleChange(field, date.toISOString());
   };
 
   return (
@@ -30,11 +52,15 @@ const EventConfirmation: React.FC<Props> = ({ data, onConfirm, onCancel }) => {
       <div className="relative bg-surface rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in-up">
         
         <div className="bg-cream border-b border-subtle p-6 text-center">
-          <h2 className="text-xl font-serif font-bold text-charcoal">Just to be sure...</h2>
-          <p className="text-charcoal/60 text-sm mt-1">Is this what you wanted to log?</p>
+          <h2 className="text-xl font-serif font-bold text-charcoal">
+            {mode === 'edit' ? 'Edit Activity' : 'Just to be sure...'}
+          </h2>
+          <p className="text-charcoal/60 text-sm mt-1">
+            {mode === 'edit' ? 'Make changes below' : 'Is this what you wanted to log?'}
+          </p>
         </div>
 
-        <div className="p-6 space-y-5 max-h-[50vh] overflow-y-auto no-scrollbar">
+        <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto no-scrollbar">
           
           {/* Type Selector */}
           <div>
@@ -50,15 +76,39 @@ const EventConfirmation: React.FC<Props> = ({ data, onConfirm, onCancel }) => {
             </select>
           </div>
 
-          {/* Time */}
-          <div>
-            <label className="block text-xs font-bold text-charcoal/50 uppercase mb-1">Time</label>
-            <input
-              type="datetime-local"
-              value={editedData.startTime.slice(0, 16)}
-              onChange={(e) => handleChange('startTime', new Date(e.target.value).toISOString())}
-              className="w-full bg-subtle text-charcoal font-sans rounded-xl p-3 border-none focus:ring-2 focus:ring-rust/50"
-            />
+          {/* Time Inputs */}
+          <div className="space-y-4">
+             <div>
+                <label className="block text-xs font-bold text-charcoal/50 uppercase mb-1">Start Time</label>
+                <input
+                  type="datetime-local"
+                  value={toLocalInputString(editedData.startTime)}
+                  onChange={(e) => handleDateChange('startTime', e.target.value)}
+                  className="w-full bg-subtle text-charcoal font-sans rounded-xl p-3 border-none focus:ring-2 focus:ring-rust/50 text-sm"
+                />
+             </div>
+             
+             {/* Show End Time only for Sleep */}
+             {editedData.type === EventType.SLEEP && (
+               <div>
+                  <label className="block text-xs font-bold text-charcoal/50 uppercase mb-1">End Time</label>
+                  <input
+                    type="datetime-local"
+                    value={toLocalInputString(editedData.endTime)}
+                    onChange={(e) => handleDateChange('endTime', e.target.value)}
+                    className="w-full bg-subtle text-charcoal font-sans rounded-xl p-3 border-none focus:ring-2 focus:ring-rust/50 text-sm"
+                  />
+                  {/* Clear Button for End Time */}
+                  {editedData.endTime && (
+                    <button 
+                      onClick={() => handleChange('endTime', null)} 
+                      className="text-[10px] text-rust font-bold mt-1 hover:underline"
+                    >
+                      Clear (Still Sleeping)
+                    </button>
+                  )}
+               </div>
+             )}
           </div>
 
           {/* Dynamic Details */}
@@ -106,6 +156,42 @@ const EventConfirmation: React.FC<Props> = ({ data, onConfirm, onCancel }) => {
                  </select>
               </div>
             )}
+
+            {editedData.type === EventType.MEASUREMENT && (
+               <div className="flex gap-3">
+                 <div className="flex-1">
+                    <label className="text-[10px] text-charcoal/50 font-bold uppercase">Type</label>
+                     <select 
+                       className="w-full bg-white p-2 rounded-lg border border-subtle mt-1 text-sm"
+                       value={editedData.details?.type || 'weight'}
+                       onChange={(e) => handleDetailsChange('type', e.target.value)}
+                     >
+                        <option value="weight">Weight</option>
+                        <option value="height">Height</option>
+                        <option value="temperature">Temperature</option>
+                     </select>
+                 </div>
+                 <div className="flex-1">
+                    <label className="text-[10px] text-charcoal/50 font-bold uppercase">Value</label>
+                    <div className="flex gap-1">
+                      <input 
+                         type="number" 
+                         step="0.1"
+                         className="w-full bg-white p-2 rounded-lg border border-subtle mt-1 text-sm"
+                         value={editedData.details?.value || ''}
+                         onChange={(e) => handleDetailsChange('value', Number(e.target.value))}
+                      />
+                      <input 
+                         type="text" 
+                         className="w-12 bg-white p-2 rounded-lg border border-subtle mt-1 text-sm text-center"
+                         placeholder="unit"
+                         value={editedData.details?.unit || ''}
+                         onChange={(e) => handleDetailsChange('unit', e.target.value)}
+                      />
+                    </div>
+                 </div>
+               </div>
+            )}
             
             <div className="mt-3">
                <label className="text-[10px] text-charcoal/50 font-bold uppercase">Note</label>
@@ -131,7 +217,7 @@ const EventConfirmation: React.FC<Props> = ({ data, onConfirm, onCancel }) => {
             onClick={() => onConfirm(editedData)}
             className="flex-1 py-3 text-sm font-bold text-white bg-rust rounded-xl shadow-lg shadow-rust/30 hover:bg-rust/90 transition-colors"
           >
-            Save It
+            {mode === 'edit' ? 'Update' : 'Save It'}
           </button>
         </div>
       </div>

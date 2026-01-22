@@ -7,6 +7,7 @@ interface EventListProps {
   events: BabyEvent[];
   selectedDate: Date;
   filterCategory: FilterCategory;
+  onEditEvent: (event: BabyEvent) => void;
 }
 
 const getIconForType = (type: EventType) => {
@@ -61,7 +62,7 @@ const formatDetails = (event: BabyEvent) => {
   }
 };
 
-const EventList: React.FC<EventListProps> = ({ events, selectedDate, filterCategory }) => {
+const EventList: React.FC<EventListProps> = ({ events, selectedDate, filterCategory, onEditEvent }) => {
   // 1. Sort events by time desc
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
@@ -103,7 +104,7 @@ const EventList: React.FC<EventListProps> = ({ events, selectedDate, filterCateg
   return (
     <div className="space-y-4 pb-32">
       {dayEvents.map((event) => (
-        <div key={event.id} className="relative group">
+        <div key={event.id} onClick={() => onEditEvent(event)} className="relative group cursor-pointer">
            <div className="group bg-surface p-4 rounded-2xl shadow-sm border border-transparent hover:border-rust/20 hover:shadow-md transition-all flex items-center gap-4 relative z-0">
             
             {/* Icon Box */}
@@ -125,6 +126,11 @@ const EventList: React.FC<EventListProps> = ({ events, selectedDate, filterCateg
               {event.notes && (
                 <p className="text-charcoal/50 text-xs mt-1 italic line-clamp-1">"{event.notes}"</p>
               )}
+            </div>
+            
+            {/* Edit Indicator */}
+            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <PencilIcon className="w-4 h-4 text-charcoal/30" />
             </div>
           </div>
         </div>

@@ -118,7 +118,22 @@ export const GeminiService = {
       const jsonText = response.text;
       if (!jsonText) throw new Error("No response from Gemini");
 
-      return JSON.parse(jsonText) as ParseResult;
+      const result = JSON.parse(jsonText) as ParseResult;
+
+      // --- NORMALIZE TIME (Round to Minute) ---
+      // We strip seconds and milliseconds to ensure clean duration calculations.
+      if (result.startTime) {
+        const d = new Date(result.startTime);
+        d.setSeconds(0, 0);
+        result.startTime = d.toISOString();
+      }
+      if (result.endTime) {
+        const d = new Date(result.endTime);
+        d.setSeconds(0, 0);
+        result.endTime = d.toISOString();
+      }
+
+      return result;
 
     } catch (error) {
       console.error("Gemini Parse Error:", error);
