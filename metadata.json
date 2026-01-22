@@ -1,0 +1,7 @@
+{
+  "name": "BabyLog",
+  "description": "Voice-first newborn tracking application powered by Gemini.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
