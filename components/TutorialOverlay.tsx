@@ -81,7 +81,7 @@ const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
     // Small delay to allow scroll to finish before calculating rect
     const timer = setTimeout(updateRect, 500);
     return () => clearTimeout(timer);
-  }, [stepIndex, currentStep.targetId]);
+  }, [stepIndex, currentStep.targetId, windowSize]);
 
   const handleNext = () => {
     if (isLastStep) {
@@ -121,20 +121,25 @@ const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
       };
     }
 
-    const tooltipWidth = 320; 
-    const margin = 20;
-    const gap = 15;
+    const margin = 16; // Minimum distance from screen edge
+    const maxTooltipWidth = 320; 
+    const gap = 16; // Distance from target element
 
-    // 1. Calculate Horizontal Position (Clamped to Screen)
-    // Start centered on element
+    // 1. Determine Actual Width
+    // The tooltip will be max 320px OR the full window width minus margins
+    const actualWidth = Math.min(maxTooltipWidth, windowSize.w - (margin * 2));
+
+    // 2. Calculate Horizontal Position
     const targetCenter = rect.left + (rect.width / 2);
-    let left = targetCenter - (tooltipWidth / 2);
+    let left = targetCenter - (actualWidth / 2);
 
-    // Clamp: Ensure it doesn't go off left edge (min: margin)
-    // Clamp: Ensure it doesn't go off right edge (max: windowWidth - width - margin)
-    left = Math.max(margin, Math.min(left, windowSize.w - tooltipWidth - margin));
+    // 3. Strict Clamp
+    // Ensure left is at least 'margin'
+    // Ensure right (left + actualWidth) is at most 'windowWidth - margin'
+    const maxLeft = windowSize.w - actualWidth - margin;
+    left = Math.max(margin, Math.min(left, maxLeft));
 
-    // 2. Calculate Vertical Position (Flip if needed)
+    // 4. Calculate Vertical Position
     let top: number;
     let verticalTransform = 'none';
     
@@ -163,7 +168,7 @@ const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
       position: 'fixed',
       top: top,
       left: left,
-      width: `${tooltipWidth}px`,
+      width: `${actualWidth}px`,
       transform: verticalTransform,
       zIndex: 60,
       maxWidth: `calc(100vw - ${margin * 2}px)`
@@ -180,7 +185,7 @@ const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
 
       <div 
         style={getTooltipStyle()} 
-        className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-start text-left animate-fade-in-up transition-all duration-300"
+        className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-start text-left"
       >
         <div className="flex justify-between items-start w-full mb-3">
            <h3 className="font-serif font-bold text-xl text-charcoal">{currentStep.title}</h3>
