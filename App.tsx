@@ -75,11 +75,7 @@ function App() {
   const checkTutorialStatus = (userId: string) => {
     const key = `babylog:tutorial_seen:${userId}`;
     const hasSeen = localStorage.getItem(key);
-    if (!hasSeen) {
-      // Don't show immediately if they need to create a baby profile first (onboarding)
-      // We will trigger it after profile creation or if profile exists.
-      // Logic handled in loadBabies or handleAddBaby
-    }
+    // Logic handled in loadBabies usually, but kept here for reference
   };
 
   const loadBabies = async () => {
@@ -353,6 +349,15 @@ function App() {
           
           {/* Profile Switcher & Logout */}
           <div className="flex items-center gap-3">
+             {/* Help Button */}
+             <button 
+                onClick={() => setShowTutorial(true)}
+                className="w-8 h-8 rounded-full border border-subtle text-charcoal/50 font-bold hover:text-rust hover:border-rust transition-colors flex items-center justify-center"
+                title="Replay Tutorial"
+             >
+               ?
+             </button>
+
              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
               {babies.map(b => (
                 <button 
@@ -451,7 +456,7 @@ function App() {
              </div>
              
              {/* View Toggles */}
-             <div className="flex bg-white rounded-lg p-1 border border-subtle shadow-sm">
+             <div id="tutorial-view-tabs" className="flex bg-white rounded-lg p-1 border border-subtle shadow-sm">
                 <button 
                   onClick={() => setViewMode('list')}
                   className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-charcoal text-white' : 'text-charcoal/50 hover:bg-subtle'}`}
@@ -506,7 +511,7 @@ function App() {
         <div className="max-w-xl mx-auto flex flex-col items-center pointer-events-auto">
           
           {/* Voice Button (Floating) */}
-          <div className="mb-4">
+          <div id="tutorial-voice-btn" className="mb-4">
             <VoiceRecorder 
               onRecordingComplete={(blob) => processInput(undefined, blob)} 
               isProcessing={isProcessing} 
@@ -514,7 +519,7 @@ function App() {
           </div>
 
           {/* Text Input (Pill) */}
-          <div className="w-full bg-surface shadow-2xl shadow-charcoal/10 rounded-full p-2 pl-6 flex items-center gap-2 border border-subtle transition-all focus-within:ring-2 focus-within:ring-rust/20">
+          <div id="tutorial-text-input" className="w-full bg-surface shadow-2xl shadow-charcoal/10 rounded-full p-2 pl-6 flex items-center gap-2 border border-subtle transition-all focus-within:ring-2 focus-within:ring-rust/20">
             <input 
               type="text" 
               placeholder="Or type manual log (e.g. 'Jane ate 4oz')..."

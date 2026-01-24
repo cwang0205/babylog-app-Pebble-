@@ -1,21 +1,12 @@
 
-import React, { useState } from 'react';
-import { 
-  SparklesIcon, 
-  MicIcon, 
-  CalendarIcon, 
-  ChartBarIcon, 
-  ListBulletIcon, 
-  PencilIcon, 
-  XMarkIcon, 
-  ArrowRightIcon 
-} from './Icons';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
+import { ArrowRightIcon, XMarkIcon } from './Icons';
 
 interface Step {
+  targetId?: string; // If undefined, show centered modal
   title: string;
   desc: string;
-  icon: React.ReactNode;
-  image?: React.ReactNode; 
+  position?: 'top' | 'bottom'; // Preferred tooltip position
 }
 
 interface Props {
@@ -25,43 +16,72 @@ interface Props {
 
 const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
   const [stepIndex, setStepIndex] = useState(0);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   const steps: Step[] = [
     {
+      targetId: undefined, // Start with a center welcome
       title: "Welcome to BabyLog!",
-      desc: `Hi${userName ? ' ' + userName : ''}! I'm your AI-powered baby care assistant. Let's watch your baby grow together by making tracking effortless.`,
-      icon: <SparklesIcon className="w-12 h-12 text-rust" />
+      desc: `Hi${userName ? ' ' + userName : ''}! I'm your AI assistant. Let me show you around your new tracking dashboard.`,
     },
     {
+      targetId: 'tutorial-dashboard',
+      title: "Daily Snapshots",
+      desc: "Here is your quick summary for today. See total sleep, feeds, and diaper changes at a glance.",
+      position: 'bottom'
+    },
+    {
+      targetId: 'tutorial-view-tabs',
+      title: "Switch Your View",
+      desc: "Toggle between a simple Timeline list, a visual 24h Schedule, or deep-dive Analysis charts.",
+      position: 'bottom'
+    },
+    {
+      targetId: 'tutorial-voice-btn',
       title: "Just Say It",
-      desc: "Tap the microphone and speak naturally. Try saying: 'Leo drank 4oz of milk' or 'He slept from 2pm to 4pm'. I'll handle the rest.",
-      icon: <MicIcon className="w-12 h-12 text-rust" />
+      desc: "Tap here and speak naturally. Try saying: 'Leo drank 4oz of milk' or 'Slept from 2 to 4'. I'll do the rest.",
+      position: 'top'
     },
     {
-      title: "You Are In Control",
-      desc: "I'll try my best to understand, but if I get it wrong, don't worry! You can manually edit the details before saving, or tap any event later to fix it.",
-      icon: <PencilIcon className="w-12 h-12 text-sage" />
-    },
-    {
-      title: "Daily Dashboard",
-      desc: "At the top of your screen, you'll see quick daily totals for feeds, sleep, and diapers so you always know where you stand today.",
-      icon: <ChartBarIcon className="w-12 h-12 text-sand" />
-    },
-    {
-      title: "Your Views",
-      desc: "Switch tabs to visualize your day:\n• Timeline: A simple list of events.\n• Schedule: A 24-hour visual calendar.\n• Analysis: 7-day trends and averages.",
-      icon: (
-        <div className="flex gap-2">
-          <ListBulletIcon className="w-8 h-8 text-charcoal/70" />
-          <CalendarIcon className="w-8 h-8 text-charcoal/70" />
-          <ChartBarIcon className="w-8 h-8 text-charcoal/70" />
-        </div>
-      )
+      targetId: 'tutorial-text-input',
+      title: "Manual Control",
+      desc: "Prefer typing? Enter details here. \n\nDon't worry if you make a mistake—you can always review and edit the details before saving.",
+      position: 'top'
     }
   ];
 
   const currentStep = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
+
+  // Track window size for boundary checks
+  useEffect(() => {
+    const handleResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate position of the target element
+  useLayoutEffect(() => {
+    const updateRect = () => {
+      if (currentStep.targetId) {
+        const el = document.getElementById(currentStep.targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setRect(el.getBoundingClientRect());
+        } else {
+          setRect(null);
+        }
+      } else {
+        setRect(null);
+      }
+    };
+
+    updateRect();
+    // Small delay to allow scroll to finish before calculating rect
+    const timer = setTimeout(updateRect, 500);
+    return () => clearTimeout(timer);
+  }, [stepIndex, currentStep.targetId]);
 
   const handleNext = () => {
     if (isLastStep) {
@@ -71,61 +91,126 @@ const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-charcoal/80 backdrop-blur-sm" onClick={onClose}></div>
+  const spotlightStyle: React.CSSProperties = rect
+    ? {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        position: 'fixed',
+        borderRadius: '16px',
+        boxShadow: '0 0 0 9999px rgba(38, 70, 83, 0.85)',
+        zIndex: 50,
+        pointerEvents: 'none',
+        transition: 'all 0.4s ease-in-out',
+      }
+    : { display: 'none' };
 
-      {/* Card */}
-      <div className="relative bg-surface w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-fade-in-up flex flex-col min-h-[400px]">
-        
-        {/* Header Image / Icon Area */}
-        <div className="bg-cream h-40 flex items-center justify-center border-b border-subtle relative">
-           {/* Close Button */}
-           <button 
-             onClick={onClose} 
-             className="absolute top-4 right-4 p-2 bg-white/50 rounded-full hover:bg-white text-charcoal/40 hover:text-charcoal transition-colors"
-           >
+  // Smart Positioning Logic
+  const getTooltipStyle = (): React.CSSProperties => {
+    if (!rect) {
+      // Centered Modal
+      return {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 60,
+        width: '90%',
+        maxWidth: '400px',
+      };
+    }
+
+    const tooltipWidth = 320; 
+    const margin = 20;
+    const gap = 15;
+
+    // 1. Calculate Horizontal Position (Clamped to Screen)
+    // Start centered on element
+    const targetCenter = rect.left + (rect.width / 2);
+    let left = targetCenter - (tooltipWidth / 2);
+
+    // Clamp: Ensure it doesn't go off left edge (min: margin)
+    // Clamp: Ensure it doesn't go off right edge (max: windowWidth - width - margin)
+    left = Math.max(margin, Math.min(left, windowSize.w - tooltipWidth - margin));
+
+    // 2. Calculate Vertical Position (Flip if needed)
+    let top: number;
+    let verticalTransform = 'none';
+    
+    // Check space available
+    const spaceAbove = rect.top;
+    const spaceBelow = windowSize.h - rect.bottom;
+    
+    // Decide preference
+    let renderPos = currentStep.position || 'bottom';
+
+    // Auto-flip if tight on space (require at least 250px)
+    if (renderPos === 'bottom' && spaceBelow < 250 && spaceAbove > 250) {
+      renderPos = 'top';
+    } else if (renderPos === 'top' && spaceAbove < 250 && spaceBelow > 250) {
+      renderPos = 'bottom';
+    }
+
+    if (renderPos === 'top') {
+      top = rect.top - gap;
+      verticalTransform = 'translateY(-100%)';
+    } else {
+      top = rect.bottom + gap;
+    }
+
+    return {
+      position: 'fixed',
+      top: top,
+      left: left,
+      width: `${tooltipWidth}px`,
+      transform: verticalTransform,
+      zIndex: 60,
+      maxWidth: `calc(100vw - ${margin * 2}px)`
+    };
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden text-charcoal font-sans">
+      
+      {!rect && <div className="absolute inset-0 bg-charcoal/85 backdrop-blur-sm transition-opacity" />}
+      {rect && (
+        <div style={spotlightStyle} className="ring-4 ring-rust ring-offset-4 ring-offset-transparent animate-pulse"></div>
+      )}
+
+      <div 
+        style={getTooltipStyle()} 
+        className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-start text-left animate-fade-in-up transition-all duration-300"
+      >
+        <div className="flex justify-between items-start w-full mb-3">
+           <h3 className="font-serif font-bold text-xl text-charcoal">{currentStep.title}</h3>
+           <button onClick={onClose} className="text-charcoal/30 hover:text-charcoal p-1">
              <XMarkIcon className="w-5 h-5" />
            </button>
-           
-           <div className="p-4 bg-white rounded-full shadow-sm ring-4 ring-subtle">
-              {currentStep.icon}
-           </div>
         </div>
+        
+        <p className="text-charcoal/70 mb-6 text-sm leading-relaxed whitespace-pre-line">
+          {currentStep.desc}
+        </p>
 
-        {/* Content Area */}
-        <div className="p-8 flex-1 flex flex-col text-center">
-          <h2 className="text-2xl font-serif font-bold text-charcoal mb-4">
-            {currentStep.title}
-          </h2>
-          <p className="text-charcoal/70 leading-relaxed whitespace-pre-line">
-            {currentStep.desc}
-          </p>
-        </div>
-
-        {/* Footer / Navigation */}
-        <div className="p-6 border-t border-subtle bg-white flex items-center justify-between">
-          
-          {/* Dots Indicator */}
-          <div className="flex gap-2">
+        <div className="flex justify-between items-center w-full mt-auto">
+          <div className="flex gap-1.5">
             {steps.map((_, i) => (
               <div 
                 key={i} 
-                className={`w-2 h-2 rounded-full transition-all ${i === stepIndex ? 'bg-rust w-4' : 'bg-subtle'}`}
+                className={`w-2 h-2 rounded-full transition-all ${i === stepIndex ? 'bg-rust w-4' : 'bg-subtle'}`} 
               />
             ))}
           </div>
 
           <button 
             onClick={handleNext}
-            className="flex items-center gap-2 px-6 py-3 bg-charcoal text-white rounded-xl font-bold hover:bg-rust transition-colors shadow-lg hover:shadow-xl"
+            className="flex items-center gap-2 px-5 py-2 bg-charcoal text-white rounded-xl font-bold text-sm hover:bg-rust transition-colors shadow-lg"
           >
-            {isLastStep ? "Let's Go!" : "Next"}
+            {isLastStep ? "Let's Start" : "Next"}
             {!isLastStep && <ArrowRightIcon className="w-4 h-4" />}
           </button>
         </div>
-
       </div>
     </div>
   );

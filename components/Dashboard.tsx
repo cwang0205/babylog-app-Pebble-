@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { BabyEvent, EventType } from '../types';
 import { FeedIcon, MoonIcon, DiaperIcon, HeartIcon, PencilIcon } from './Icons';
@@ -81,7 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div id="tutorial-dashboard" className="grid grid-cols-2 gap-4">
       {/* Feed Card */}
       <StatCard 
         label="Feeding" 
@@ -125,7 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
         subtext={stats.wellness.sub} 
         icon={stats.wellness.isAlert ? <HeartIcon className="w-5 h-5" /> : <PencilIcon className="w-5 h-5" />} 
         colorClass={stats.wellness.isAlert ? "text-rose-600" : "text-slate-600"}
-        bgClass={stats.wellness.isAlert ? "bg-rose-100" : "bg-slate-100"}
+        bgClass={stats.wellness.isAlert ? "bg-slate-100" : "bg-slate-100"}
         isActive={activeFilter === 'wellness'}
         onClick={() => handleToggle('wellness')} 
       />
