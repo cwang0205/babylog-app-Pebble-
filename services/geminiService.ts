@@ -1,9 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ParseResult, EventType } from "../types";
 
-// Note: In a production app, the API Key should be handled via a secure backend proxy or strictly env vars.
-// For this demo, we assume process.env.API_KEY is available.
-const API_KEY = process.env.API_KEY || ''; 
+// HANDLING API KEY:
+// 1. Try standard process.env (Create-React-App / Node)
+// 2. Try import.meta.env (Vite) - requires ts-ignore or specific config
+// 3. Fallback to empty string (will throw error later)
+// @ts-ignore
+const API_KEY = process.env.API_KEY || (import.meta && import.meta.env ? import.meta.env.VITE_API_KEY : '') || ''; 
 
 // Using gemini-3-flash-preview for multimodal capabilities (Text/Audio -> JSON)
 const MODEL_NAME = 'gemini-3-flash-preview';
@@ -35,7 +38,8 @@ export const GeminiService = {
     input: { text?: string; audioBase64?: string; mimeType?: string }
   ): Promise<ParseResult> => {
     if (!API_KEY) {
-      throw new Error("Missing Gemini API Key. Please set process.env.API_KEY");
+      console.error("Gemini API Key is missing. Ensure REACT_APP_API_KEY or VITE_API_KEY is set in your environment.");
+      throw new Error("Missing Gemini API Key configuration.");
     }
 
     const ai = new GoogleGenAI({ apiKey: API_KEY });

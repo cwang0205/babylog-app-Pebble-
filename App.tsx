@@ -1,4 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
+import { User } from 'firebase/auth';
+import { AuthService } from './services/authService';
 import { StorageService } from './services/storageService';
 import { GeminiService } from './services/geminiService';
 import { BabyEvent, BabyProfile, Gender, ParseResult } from './types';
@@ -8,12 +11,18 @@ import Dashboard, { FilterCategory } from './components/Dashboard';
 import ConsolidatedReport from './components/ConsolidatedReport';
 import EventConfirmation from './components/EventConfirmation';
 import DayCalendarView from './components/DayCalendarView';
+import TutorialOverlay from './components/TutorialOverlay';
 import { PlusIcon, SendIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon } from './components/Icons';
 
 type ViewMode = 'list' | 'calendar' | 'report';
 
 function App() {
-  // State
+  // Auth State
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // App State
   const [babies, setBabies] = useState<BabyProfile[]>([]);
   const [currentBaby, setCurrentBaby] = useState<BabyProfile | null>(null);
   const [events, setEvents] = useState<BabyEvent[]>([]);
@@ -27,58 +36,104 @@ function App() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [showAddBaby, setShowAddBaby] = useState(false);
   
+  // Tutorial State
+  const [showTutorial, setShowTutorial] = useState(false);
+  
   // Onboarding Form State
   const [newBabyName, setNewBabyName] = useState('');
   const [newBabyDate, setNewBabyDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Initialization
+  // 1. Auth Listener
   useEffect(() => {
-    // Inject demo data if app is empty
-    StorageService.initializeDemoData();
-
-    const loadedBabies = StorageService.getBabies();
-    setBabies(loadedBabies);
-    
-    if (loadedBabies.length > 0) {
-      const savedId = StorageService.getCurrentBabyId();
-      const selected = loadedBabies.find(b => b.id === savedId) || loadedBabies[0];
-      setCurrentBaby(selected);
-    } else {
-      setShowAddBaby(true);
-    }
+    const unsubscribe = AuthService.onUserChange((currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
+  // 2. Load Babies when User Logs In
+  useEffect(() => {
+    if (user) {
+      loadBabies();
+      checkTutorialStatus(user.uid);
+    } else {
+      setBabies([]);
+      setCurrentBaby(null);
+      setEvents([]);
+    }
+  }, [user]);
+
+  // 3. Load Events when Baby Selected
   useEffect(() => {
     if (currentBaby) {
-      StorageService.setCurrentBabyId(currentBaby.id);
-      refreshEvents();
-      // Reset filter when switching babies
+      loadEvents(currentBaby.id);
       setFilterCategory(null);
     }
   }, [currentBaby]);
 
-  const refreshEvents = () => {
-    if (currentBaby) {
-      const babyEvents = StorageService.getEvents(currentBaby.id);
-      setEvents(babyEvents);
+  const checkTutorialStatus = (userId: string) => {
+    const key = `babylog:tutorial_seen:${userId}`;
+    const hasSeen = localStorage.getItem(key);
+    if (!hasSeen) {
+      // Don't show immediately if they need to create a baby profile first (onboarding)
+      // We will trigger it after profile creation or if profile exists.
+      // Logic handled in loadBabies or handleAddBaby
     }
   };
 
-  // Logic
-  const handleAddBaby = () => {
-    if (!newBabyName.trim() || !newBabyDate) return;
-    const newBaby: BabyProfile = {
-      id: crypto.randomUUID(),
+  const loadBabies = async () => {
+    if (!user) return;
+    const loadedBabies = await StorageService.getBabies(user.uid);
+    setBabies(loadedBabies);
+    
+    if (loadedBabies.length > 0) {
+      setCurrentBaby(loadedBabies[0]);
+      // If user has babies, check tutorial
+      const key = `babylog:tutorial_seen:${user.uid}`;
+      if (!localStorage.getItem(key)) {
+        setShowTutorial(true);
+      }
+    } else {
+      setShowAddBaby(true);
+    }
+  };
+
+  const loadEvents = async (babyId: string) => {
+    const babyEvents = await StorageService.getEvents(babyId);
+    setEvents(babyEvents);
+  };
+
+  const handleAddBaby = async () => {
+    if (!newBabyName.trim() || !newBabyDate || !user) return;
+    
+    const newBabyData = {
       name: newBabyName,
       birthDate: new Date(newBabyDate).toISOString(),
       gender: Gender.BOY // Defaulting for simplicity
     };
-    StorageService.saveBaby(newBaby);
-    setBabies([...babies, newBaby]);
-    setCurrentBaby(newBaby);
+
+    const createdBaby = await StorageService.saveBaby(user.uid, newBabyData);
+    
+    setBabies([...babies, createdBaby]);
+    setCurrentBaby(createdBaby);
     setShowAddBaby(false);
     setNewBabyName('');
     setNewBabyDate(new Date().toISOString().split('T')[0]);
+    
+    // Show tutorial after first baby created
+    const key = `babylog:tutorial_seen:${user.uid}`;
+    if (!localStorage.getItem(key)) {
+      setShowTutorial(true);
+    }
+  };
+
+  const closeTutorial = () => {
+    if (user) {
+      const key = `babylog:tutorial_seen:${user.uid}`;
+      localStorage.setItem(key, 'true');
+    }
+    setShowTutorial(false);
   };
 
   const handleDateChange = (days: number) => {
@@ -132,35 +187,32 @@ function App() {
     setEditingEventId(null);
   };
 
-  const saveEvent = (data: ParseResult) => {
+  const saveEvent = async (data: ParseResult) => {
     if (!currentBaby) return;
     
     if (editingEventId) {
       // Update Existing Event
       const updatedEvent: BabyEvent = {
         ...data as BabyEvent,
-        id: editingEventId, // Ensure ID is correct
+        id: editingEventId,
         babyId: currentBaby.id,
         createdAt: events.find(e => e.id === editingEventId)?.createdAt || new Date().toISOString()
       };
-      StorageService.updateEvent(updatedEvent);
-      setEditingEventId(null);
+      await StorageService.updateEvent(updatedEvent);
     } else {
       // Create New Event
-      // Ensure we don't accidentally pull in an ID if one exists in data
       const { id, ...cleanData } = data as any;
-      
-      const newEvent: BabyEvent = {
-        id: crypto.randomUUID(),
+      const newEventData = {
         babyId: currentBaby.id,
         createdAt: new Date().toISOString(),
         ...cleanData
       };
-      StorageService.addEvent(newEvent);
+      await StorageService.addEvent(newEventData);
     }
     
     setPendingEvent(null);
-    refreshEvents();
+    setEditingEventId(null);
+    loadEvents(currentBaby.id);
   };
 
   const calculateAge = (birthDateStr: string) => {
@@ -172,7 +224,7 @@ function App() {
     if (diffDays === 0) return 'Newborn';
     if (diffDays < 30) return `${diffDays} days old`;
     
-    const months = Math.floor(diffDays / 30.44); // Approx days in month
+    const months = Math.floor(diffDays / 30.44);
     const remainingDays = Math.floor(diffDays % 30.44);
     
     if (months < 12) {
@@ -184,14 +236,75 @@ function App() {
     return `${years}y ${remainingMonths}m old`;
   };
 
-  // Onboarding View
+  const handleLogin = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
+    
+    try {
+      await AuthService.signInWithGoogle();
+    } catch (error: any) {
+      console.error("Login failed", error);
+      alert("Sign in failed. Check console for details.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // --- RENDERING ---
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-rust/30 border-t-rust rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // LOGIN SCREEN
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-cream flex flex-col items-center justify-center p-6 relative">
+        
+        <div className="text-center space-y-6 max-w-sm w-full animate-fade-in-up">
+           <div className="w-20 h-20 bg-rust rounded-full flex items-center justify-center text-white font-serif font-bold italic text-4xl mx-auto shadow-xl shadow-rust/30">
+             B
+           </div>
+           <div>
+             <h1 className="text-4xl font-serif font-bold text-charcoal">BabyLog</h1>
+             <p className="text-charcoal/60 mt-2 text-lg">Voice-first tracking for modern parents.</p>
+           </div>
+           
+           {/* Login Button */}
+           <div className="pt-8">
+             <button 
+               onClick={handleLogin}
+               disabled={isLoggingIn}
+               className={`w-full flex items-center justify-center gap-3 bg-white border border-subtle p-4 rounded-xl shadow-sm hover:shadow-md transition-all font-bold text-charcoal group ${isLoggingIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+             >
+               {isLoggingIn ? (
+                 <div className="w-6 h-6 border-2 border-charcoal/30 border-t-charcoal rounded-full animate-spin"></div>
+               ) : (
+                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="G" />
+               )}
+               <span className="group-hover:text-rust transition-colors">
+                 {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
+               </span>
+             </button>
+             <p className="text-xs text-charcoal/40 mt-4">Your data is securely stored in the cloud.</p>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ONBOARDING SCREEN
   if (showAddBaby) {
     return (
       <div className="min-h-screen bg-cream flex flex-col justify-center items-center px-6 animate-fade-in-up">
         <div className="w-full max-w-md bg-surface p-8 rounded-3xl shadow-xl border border-subtle text-center">
           <div className="w-16 h-16 bg-sage/20 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">👶</div>
-          <h1 className="text-3xl font-serif font-bold text-charcoal mb-2">Welcome to BabyLog</h1>
-          <p className="text-charcoal/70 mb-8 font-sans">Let's start by creating a profile for your little one.</p>
+          <h1 className="text-3xl font-serif font-bold text-charcoal mb-2">Welcome!</h1>
+          <p className="text-charcoal/70 mb-8 font-sans">Let's create a profile for your little one.</p>
           
           <div className="text-left mb-6 space-y-4">
             <div>
@@ -226,7 +339,7 @@ function App() {
     );
   }
 
-  // Main App View
+  // MAIN APP
   return (
     <div className="min-h-screen bg-cream flex flex-col relative">
       
@@ -238,31 +351,42 @@ function App() {
             <span className="font-serif font-bold text-xl text-charcoal">BabyLog</span>
           </div>
           
-          {/* Profile Switcher */}
-          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2">
-            {babies.map(b => (
+          {/* Profile Switcher & Logout */}
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
+              {babies.map(b => (
+                <button 
+                  key={b.id}
+                  onClick={() => setCurrentBaby(b)}
+                  className={`
+                    flex items-center gap-2 px-3 py-1 rounded-full transition-all border
+                    ${currentBaby?.id === b.id 
+                      ? 'bg-charcoal text-white border-charcoal shadow-sm' 
+                      : 'bg-white text-charcoal/70 border-subtle hover:border-sage'}
+                  `}
+                >
+                  <span className="text-xs font-bold">{b.name}</span>
+                </button>
+              ))}
               <button 
-                key={b.id}
-                onClick={() => setCurrentBaby(b)}
-                className={`
-                  flex items-center gap-2 px-3 py-1 rounded-full transition-all border
-                  ${currentBaby?.id === b.id 
-                    ? 'bg-charcoal text-white border-charcoal shadow-sm' 
-                    : 'bg-white text-charcoal/70 border-subtle hover:border-sage'}
-                `}
+                onClick={() => {
+                  setShowAddBaby(true);
+                  setNewBabyName('');
+                  setNewBabyDate(new Date().toISOString().split('T')[0]);
+                }}
+                className="w-8 h-8 rounded-full bg-white border border-dashed border-charcoal/30 flex items-center justify-center text-charcoal/50 hover:bg-subtle hover:text-charcoal transition-colors"
               >
-                <span className="text-xs font-bold">{b.name}</span>
+                <PlusIcon className="w-4 h-4" />
               </button>
-            ))}
+            </div>
+            
+            <div className="h-6 w-[1px] bg-charcoal/10 mx-1"></div>
+            
             <button 
-              onClick={() => {
-                setShowAddBaby(true);
-                setNewBabyName('');
-                setNewBabyDate(new Date().toISOString().split('T')[0]);
-              }}
-              className="w-8 h-8 rounded-full bg-white border border-dashed border-charcoal/30 flex items-center justify-center text-charcoal/50 hover:bg-subtle hover:text-charcoal transition-colors"
+              onClick={() => AuthService.signOut()}
+              className="text-xs font-bold text-charcoal/50 hover:text-rust underline"
             >
-              <PlusIcon className="w-4 h-4" />
+              Logout
             </button>
           </div>
         </header>
@@ -301,7 +425,7 @@ function App() {
       {/* 2. Main Grid Layout */}
       <main className="flex-1 px-4 md:px-6 pb-32 max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-12 gap-6">
         
-        {/* Top: Quick Stats (The simple 4-card dashboard) */}
+        {/* Top: Quick Stats */}
         <div className="md:col-span-12 animate-fade-in-up stagger-1">
           <Dashboard 
             events={events} 
@@ -413,6 +537,13 @@ function App() {
       </div>
 
       {/* Modals */}
+      {showTutorial && (
+        <TutorialOverlay 
+          onClose={closeTutorial} 
+          userName={user.displayName?.split(' ')[0]} 
+        />
+      )}
+
       {pendingEvent && (
         <EventConfirmation 
           data={pendingEvent} 

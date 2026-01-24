@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BabyLog - Product Requirements Document</title>
+    <style>
+        body {
+            font-family: 'Calibri', 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #fff;
+        }
+        h1 { color: #E76F51; border-bottom: 2px solid #E76F51; padding-bottom: 10px; }
+        h2 { color: #264653; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        h3 { color: #2A9D8F; margin-top: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 4px; font-family: 'Consolas', monospace; color: #d63384; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; border-left: 5px solid #2A9D8F; }
+        ul { margin-bottom: 15px; }
+        li { margin-bottom: 5px; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; color: white; margin-right: 5px; }
+        .tag.feat { background-color: #2A9D8F; }
+        .tag.tech { background-color: #264653; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f8f8f8; }
+        .print-only { display: none; }
+        @media print {
+            body { max-width: 100%; padding: 0; margin: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print" style="background: #eef; padding: 15px; border-radius: 5px; margin-bottom: 30px; border: 1px solid #ccf;">
+        <strong>Export Instructions:</strong>
+        <ul>
+            <li>To save as <strong>Word (.docx)</strong>: Right-click this file > Open with > Microsoft Word. Then "Save As" Word Document.</li>
+            <li>To save as <strong>PDF</strong>: Press Ctrl+P (Cmd+P) and select "Save as PDF".</li>
+        </ul>
+    </div>
+
+    <h1>Product Requirements Document (PRD)</h1>
+    <p><strong>Project:</strong> BabyLog (Local Edition)<br>
+    <strong>Version:</strong> 1.1.0 (Lite)<br>
+    <strong>Date:</strong> 2025-05-20</p>
+
+    <h2>1. Executive Summary</h2>
+    <p>BabyLog is a "voice-first" progressive web application designed for modern parents to track newborn activities. 
+    <strong>Version 1.1 switches to a Local-First architecture.</strong> Authentication is still handled via Google for security, but all baby data and logs are stored exclusively in the user's browser (Local Storage) ensuring privacy and speed without cloud database costs.</p>
+
+    <h2>2. User Personas</h2>
+    <ul>
+        <li><strong>The Privacy-Conscious Parent:</strong> Wants to track their baby's health but prefers keeping data on their own device rather than a remote cloud server.</li>
+        <li><strong>The Offline User:</strong> Needs the app to work flawlessly even when internet connectivity is spotty, syncing only authentication.</li>
+    </ul>
+
+    <h2>3. Technical Architecture</h2>
+    
+    <h3>Frontend</h3>
+    <ul>
+        <li><span class="tag tech">Framework</span> <strong>React 19</strong>.</li>
+        <li><span class="tag tech">Language</span> <strong>TypeScript</strong>.</li>
+        <li><span class="tag tech">Styling</span> <strong>Tailwind CSS</strong>.</li>
+    </ul>
+
+    <h3>Backend & Data</h3>
+    <ul>
+        <li><span class="tag tech">Auth</span> <strong>Firebase Authentication</strong> (Google Sign-In). Used solely to identify the user and namespace their local data.</li>
+        <li><span class="tag tech">Database</span> <strong>Browser Local Storage</strong>.
+            <ul>
+                <li><code>babylog:babies:{userId}</code>: JSON Array of profiles.</li>
+                <li><code>babylog:events:{babyId}</code>: JSON Array of event logs.</li>
+            </ul>
+        </li>
+        <li><span class="tag tech">AI</span> <strong>Google Gemini API</strong> (<code>gemini-3-flash-preview</code>).
+            <ul>
+                <li>Converts Audio/Text to JSON structured data.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>4. Key Features</h2>
+
+    <h3>A. Authentication</h3>
+    <ul>
+        <li>Secure Google Sign-In (required to create a user namespace).</li>
+        <li>Data separation: Logging in as a different Google user reveals a different set of local data.</li>
+    </ul>
+
+    <h3>B. Multimodal Input (Core)</h3>
+    <ul>
+        <li><span class="tag feat">Voice</span> One-tap recording using Web Audio API.</li>
+        <li><span class="tag feat">AI</span> Gemini processing to parse natural language into data.</li>
+    </ul>
+
+    <h3>C. Visualization & Management</h3>
+    <ul>
+        <li><strong>Dashboard:</strong> Daily aggregates (Feed, Sleep, Diaper).</li>
+        <li><strong>Timeline:</strong> Chronological list view.</li>
+        <li><strong>Calendar:</strong> 24h visual schedule.</li>
+    </ul>
+
+</body>
+</html>
