@@ -1,3 +1,4 @@
+
 export enum EventType {
   FEED = 'feed',
   SLEEP = 'sleep',
@@ -19,6 +20,8 @@ export interface BabyProfile {
   birthDate: string; // ISO Date
   gender: Gender;
   weight?: number; // in kg
+  ownerId: string; // The creator's UID
+  allowedEmails: string[]; // List of emails that can access this profile
 }
 
 export interface BabyEvent {
@@ -30,6 +33,7 @@ export interface BabyEvent {
   details: Record<string, any>; // Flexible payload based on type
   notes?: string;
   createdAt: string;
+  createdByEmail?: string; // Track who logged the event
 }
 
 // Specific detail interfaces for type safety in UI

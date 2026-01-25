@@ -12,7 +12,8 @@ import ConsolidatedReport from './components/ConsolidatedReport';
 import EventConfirmation from './components/EventConfirmation';
 import DayCalendarView from './components/DayCalendarView';
 import TutorialOverlay from './components/TutorialOverlay';
-import { PlusIcon, SendIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon } from './components/Icons';
+import ShareBabyModal from './components/ShareBabyModal';
+import { PlusIcon, SendIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, UserPlusIcon } from './components/Icons';
 
 type ViewMode = 'list' | 'calendar' | 'report';
 
@@ -34,14 +35,18 @@ function App() {
   const [textInput, setTextInput] = useState('');
   const [pendingEvent, setPendingEvent] = useState<ParseResult | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [showAddBaby, setShowAddBaby] = useState(false);
   
+  // Onboarding / Baby Creation State
+  const [showAddBaby, setShowAddBaby] = useState(false);
+  const [isCreatingBaby, setIsCreatingBaby] = useState(false); // New loading state for baby creation
+  const [newBabyName, setNewBabyName] = useState('');
+  const [newBabyDate, setNewBabyDate] = useState(new Date().toISOString().split('T')[0]);
+
   // Tutorial State
   const [showTutorial, setShowTutorial] = useState(false);
   
-  // Onboarding Form State
-  const [newBabyName, setNewBabyName] = useState('');
-  const [newBabyDate, setNewBabyDate] = useState(new Date().toISOString().split('T')[0]);
+  // Share Modal State
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // 1. Auth Listener
   useEffect(() => {
@@ -54,8 +59,8 @@ function App() {
 
   // 2. Load Babies when User Logs In
   useEffect(() => {
-    if (user) {
-      loadBabies();
+    if (user && user.email) {
+      loadBabies(user.email);
       checkTutorialStatus(user.uid);
     } else {
       setBabies([]);
@@ -78,15 +83,14 @@ function App() {
     // Logic handled in loadBabies usually, but kept here for reference
   };
 
-  const loadBabies = async () => {
-    if (!user) return;
-    const loadedBabies = await StorageService.getBabies(user.uid);
+  const loadBabies = async (email: string) => {
+    const loadedBabies = await StorageService.getBabies(email);
     setBabies(loadedBabies);
     
     if (loadedBabies.length > 0) {
       setCurrentBaby(loadedBabies[0]);
       // If user has babies, check tutorial
-      const key = `babylog:tutorial_seen:${user.uid}`;
+      const key = `babylog:tutorial_seen:${user!.uid}`;
       if (!localStorage.getItem(key)) {
         setShowTutorial(true);
       }
@@ -101,26 +105,44 @@ function App() {
   };
 
   const handleAddBaby = async () => {
-    if (!newBabyName.trim() || !newBabyDate || !user) return;
-    
-    const newBabyData = {
-      name: newBabyName,
-      birthDate: new Date(newBabyDate).toISOString(),
-      gender: Gender.BOY // Defaulting for simplicity
-    };
+    if (!newBabyName.trim()) {
+      alert("Please enter a name for the baby.");
+      return;
+    }
+    if (!user || !user.email) return;
 
-    const createdBaby = await StorageService.saveBaby(user.uid, newBabyData);
-    
-    setBabies([...babies, createdBaby]);
-    setCurrentBaby(createdBaby);
-    setShowAddBaby(false);
-    setNewBabyName('');
-    setNewBabyDate(new Date().toISOString().split('T')[0]);
-    
-    // Show tutorial after first baby created
-    const key = `babylog:tutorial_seen:${user.uid}`;
-    if (!localStorage.getItem(key)) {
-      setShowTutorial(true);
+    setIsCreatingBaby(true);
+    try {
+      const newBabyData = {
+        name: newBabyName,
+        birthDate: new Date(newBabyDate).toISOString(),
+        gender: Gender.BOY // Defaulting for simplicity
+      };
+
+      const createdBaby = await StorageService.saveBaby(user.uid, user.email, newBabyData);
+      
+      setBabies([...babies, createdBaby]);
+      setCurrentBaby(createdBaby);
+      setShowAddBaby(false);
+      setNewBabyName('');
+      setNewBabyDate(new Date().toISOString().split('T')[0]);
+      
+      // Show tutorial after first baby created
+      const key = `babylog:tutorial_seen:${user.uid}`;
+      if (!localStorage.getItem(key)) {
+        setShowTutorial(true);
+      }
+    } catch (error: any) {
+      console.error("Error creating profile:", error);
+      
+      // Detailed Error Handling for Firestore
+      if (error.code === 'permission-denied') {
+        alert("Permission Denied: Your Firestore Database Rules are blocking this request. Please go to Firebase Console > Firestore > Rules and allow read/write for authenticated users.");
+      } else {
+        alert(`Failed to create profile: ${error.message || 'Unknown error'}`);
+      }
+    } finally {
+      setIsCreatingBaby(false);
     }
   };
 
@@ -184,7 +206,7 @@ function App() {
   };
 
   const saveEvent = async (data: ParseResult) => {
-    if (!currentBaby) return;
+    if (!currentBaby || !user) return;
     
     if (editingEventId) {
       // Update Existing Event
@@ -192,7 +214,8 @@ function App() {
         ...data as BabyEvent,
         id: editingEventId,
         babyId: currentBaby.id,
-        createdAt: events.find(e => e.id === editingEventId)?.createdAt || new Date().toISOString()
+        createdAt: events.find(e => e.id === editingEventId)?.createdAt || new Date().toISOString(),
+        createdByEmail: user.email || ''
       };
       await StorageService.updateEvent(updatedEvent);
     } else {
@@ -201,6 +224,7 @@ function App() {
       const newEventData = {
         babyId: currentBaby.id,
         createdAt: new Date().toISOString(),
+        createdByEmail: user.email || '',
         ...cleanData
       };
       await StorageService.addEvent(newEventData);
@@ -208,6 +232,7 @@ function App() {
     
     setPendingEvent(null);
     setEditingEventId(null);
+    // Refresh events from cloud
     loadEvents(currentBaby.id);
   };
 
@@ -326,9 +351,12 @@ function App() {
           
           <button 
             onClick={handleAddBaby}
-            className="w-full py-4 bg-rust text-white rounded-xl font-bold text-lg shadow-lg shadow-rust/30 hover:shadow-xl hover:bg-rust/90 transition-all transform hover:-translate-y-0.5"
+            disabled={isCreatingBaby}
+            className="w-full py-4 bg-rust text-white rounded-xl font-bold text-lg shadow-lg shadow-rust/30 hover:shadow-xl hover:bg-rust/90 transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
           >
-            Create Profile
+            {isCreatingBaby ? (
+               <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            ) : "Create Profile"}
           </button>
         </div>
       </div>
@@ -374,6 +402,7 @@ function App() {
                 </button>
               ))}
               <button 
+                id="tutorial-add-baby-btn"
                 onClick={() => {
                   setShowAddBaby(true);
                   setNewBabyName('');
@@ -404,7 +433,20 @@ function App() {
              </h1>
              <div className="flex items-center gap-2 text-charcoal/60 mt-1">
                <span className="font-bold">{currentBaby?.name}</span>
-               <span>•</span>
+               
+               {/* Share Button */}
+               {currentBaby && (
+                 <button 
+                   id="tutorial-share-btn"
+                   onClick={() => setShowShareModal(true)}
+                   className="ml-2 flex items-center gap-1 bg-sage/10 text-sage hover:bg-sage/20 px-2 py-0.5 rounded-full text-xs font-bold transition-colors"
+                 >
+                   <UserPlusIcon className="w-3 h-3" />
+                   <span>Share</span>
+                 </button>
+               )}
+               
+               <span className="mx-1">•</span>
                <span>{currentBaby ? calculateAge(currentBaby.birthDate) : ''}</span>
              </div>
           </div>
@@ -546,6 +588,19 @@ function App() {
         <TutorialOverlay 
           onClose={closeTutorial} 
           userName={user.displayName?.split(' ')[0]} 
+        />
+      )}
+
+      {showShareModal && currentBaby && (
+        <ShareBabyModal 
+          baby={currentBaby}
+          onClose={() => {
+            setShowShareModal(false);
+            // Refresh babies list to show any changes in allowed emails if they removed themselves (rare edge case)
+            if (user && user.email) loadBabies(user.email);
+          }}
+          currentUserEmail={user.email}
+          currentUserId={user.uid}
         />
       )}
 

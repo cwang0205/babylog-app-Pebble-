@@ -1,132 +1,157 @@
+
+import { db } from './firebase';
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  query, 
+  where, 
+  getDocs, 
+  deleteDoc,
+  arrayUnion,
+  arrayRemove
+} from 'firebase/firestore';
 import { BabyProfile, BabyEvent } from '../types';
 
-// STORAGE KEYS
-// We will namespace data by user ID or baby ID to keep organization clean.
-// Pattern: 'babylog:babies:{userId}'
-// Pattern: 'babylog:events:{babyId}'
-
-const generateId = () => Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+// COLLECTION NAMES
+const BABIES_COLLECTION = 'babies';
+const EVENTS_COLLECTION = 'events';
 
 export const StorageService = {
   
-  // --- BABY PROFILES ---
+  // --- BABY PROFILES (CLOUD + SHARING) ---
 
-  getBabies: async (userId: string): Promise<BabyProfile[]> => {
+  /**
+   * Fetches all babies where the current user's email is in the 'allowedEmails' list.
+   * This covers both babies they own and babies shared with them.
+   */
+  getBabies: async (userEmail: string): Promise<BabyProfile[]> => {
     try {
-      const key = `babylog:babies:${userId}`;
-      const json = localStorage.getItem(key);
-      if (!json) return [];
-      return JSON.parse(json) as BabyProfile[];
+      const babiesRef = collection(db, BABIES_COLLECTION);
+      // Query: Give me babies where 'allowedEmails' array contains my email
+      const q = query(babiesRef, where("allowedEmails", "array-contains", userEmail));
+      
+      const querySnapshot = await getDocs(q);
+      const babies: BabyProfile[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        babies.push({ id: doc.id, ...doc.data() } as BabyProfile);
+      });
+      
+      return babies;
     } catch (e) {
-      console.error("Error fetching babies from local storage:", e);
+      console.error("Error fetching babies from Firestore:", e);
       return [];
     }
   },
 
-  saveBaby: async (userId: string, baby: Omit<BabyProfile, 'id'>): Promise<BabyProfile> => {
+  /**
+   * Creates a new baby profile in the cloud.
+   * Automatically adds the creator's email to allowedEmails.
+   */
+  saveBaby: async (userId: string, userEmail: string, baby: Omit<BabyProfile, 'id' | 'ownerId' | 'allowedEmails'>): Promise<BabyProfile> => {
     try {
-      const key = `babylog:babies:${userId}`;
-      const existingJson = localStorage.getItem(key);
-      const babies: BabyProfile[] = existingJson ? JSON.parse(existingJson) : [];
-      
-      const newBaby: BabyProfile = {
-        id: generateId(),
-        ...baby
+      const newBabyData = {
+        ...baby,
+        ownerId: userId,
+        allowedEmails: [userEmail] // Initialize access list with creator
       };
+
+      const docRef = await addDoc(collection(db, BABIES_COLLECTION), newBabyData);
       
-      babies.push(newBaby);
-      localStorage.setItem(key, JSON.stringify(babies));
-      
-      return newBaby;
+      return {
+        id: docRef.id,
+        ...newBabyData
+      };
     } catch (e) {
-      console.error("Error saving baby to local storage:", e);
+      console.error("Error saving baby to Firestore:", e);
       throw e;
     }
   },
 
-  // --- EVENTS ---
+  /**
+   * Shares a baby profile with another user by email.
+   */
+  shareBaby: async (babyId: string, emailToInvite: string): Promise<void> => {
+    try {
+      const babyRef = doc(db, BABIES_COLLECTION, babyId);
+      await updateDoc(babyRef, {
+        allowedEmails: arrayUnion(emailToInvite)
+      });
+    } catch (e) {
+      console.error("Error sharing baby:", e);
+      throw e;
+    }
+  },
+
+  /**
+   * Revokes access for a user.
+   */
+  unshareBaby: async (babyId: string, emailToRemove: string): Promise<void> => {
+    try {
+      const babyRef = doc(db, BABIES_COLLECTION, babyId);
+      await updateDoc(babyRef, {
+        allowedEmails: arrayRemove(emailToRemove)
+      });
+    } catch (e) {
+      console.error("Error unsharing baby:", e);
+      throw e;
+    }
+  },
+
+  // --- EVENTS (CLOUD) ---
 
   getEvents: async (babyId: string): Promise<BabyEvent[]> => {
     try {
-      const key = `babylog:events:${babyId}`;
-      const json = localStorage.getItem(key);
-      const events: BabyEvent[] = json ? JSON.parse(json) : [];
+      const eventsRef = collection(db, EVENTS_COLLECTION);
+      // Simple query: all events for this babyId
+      const q = query(eventsRef, where("babyId", "==", babyId));
       
-      // Sort by start time descending (newest first)
+      const querySnapshot = await getDocs(q);
+      const events: BabyEvent[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        events.push({ id: doc.id, ...doc.data() } as BabyEvent);
+      });
+      
+      // Sort in memory (or add compound index in Firestore for orderBy)
       return events.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
     } catch (e) {
-      console.error("Error fetching events from local storage:", e);
+      console.error("Error fetching events from Firestore:", e);
       return [];
     }
   },
 
   addEvent: async (event: Omit<BabyEvent, 'id'>): Promise<BabyEvent> => {
     try {
-      const key = `babylog:events:${event.babyId}`;
-      const existingJson = localStorage.getItem(key);
-      const events: BabyEvent[] = existingJson ? JSON.parse(existingJson) : [];
-      
-      const newEvent: BabyEvent = {
-        id: generateId(),
+      const docRef = await addDoc(collection(db, EVENTS_COLLECTION), event);
+      return {
+        id: docRef.id,
         ...event
       };
-      
-      events.push(newEvent);
-      localStorage.setItem(key, JSON.stringify(events));
-      
-      return newEvent;
     } catch (e) {
-      console.error("Error adding event to local storage:", e);
+      console.error("Error adding event to Firestore:", e);
       throw e;
     }
   },
 
   updateEvent: async (event: BabyEvent): Promise<void> => {
     try {
-      const key = `babylog:events:${event.babyId}`;
-      const existingJson = localStorage.getItem(key);
-      if (!existingJson) return;
-
-      let events: BabyEvent[] = JSON.parse(existingJson);
-      const index = events.findIndex(e => e.id === event.id);
-      
-      if (index !== -1) {
-        events[index] = event;
-        localStorage.setItem(key, JSON.stringify(events));
-      }
+      const eventRef = doc(db, EVENTS_COLLECTION, event.id);
+      const { id, ...data } = event; // Don't save ID inside the doc data if unnecessary
+      await updateDoc(eventRef, data);
     } catch (e) {
-      console.error("Error updating event in local storage:", e);
+      console.error("Error updating event in Firestore:", e);
+      throw e;
     }
   },
 
   deleteEvent: async (eventId: string): Promise<void> => {
-    // Note: This function requires finding which baby list the event belongs to.
-    // In a real local-first app with this structure, passing the babyId is preferred.
-    // However, to maintain the interface, we will iterate keys or assuming the caller knows.
-    // For simplicity in this specific "Simpler Version" request, we will search all event keys.
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('babylog:events:')) {
-          const json = localStorage.getItem(key);
-          let events: BabyEvent[] = json ? JSON.parse(json) : [];
-          
-          const initialLength = events.length;
-          events = events.filter(e => e.id !== eventId);
-          
-          if (events.length !== initialLength) {
-             localStorage.setItem(key, JSON.stringify(events));
-             return; // Found and deleted
-          }
-        }
-      }
+      await deleteDoc(doc(db, EVENTS_COLLECTION, eventId));
     } catch (e) {
-      console.error("Error deleting event from local storage:", e);
+      console.error("Error deleting event from Firestore:", e);
     }
-  },
-
-  // --- DEMO DATA (Optional) ---
-  initializeDemoData: () => {
-     // No-op
   }
 };

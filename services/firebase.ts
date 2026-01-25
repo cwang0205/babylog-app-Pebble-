@@ -1,5 +1,7 @@
+
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 // --- PASTE YOUR FIREBASE CONFIG HERE ---
 // You can get this from Project Settings -> General -> Your Apps -> Web App
@@ -14,4 +16,4 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-// Firestore is no longer exported/initialized
+export const db = getFirestore(app);

@@ -26,6 +26,18 @@ const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
       desc: `Hi${userName ? ' ' + userName : ''}! I'm your AI assistant. Let me show you around your new tracking dashboard.`,
     },
     {
+      targetId: 'tutorial-add-baby-btn',
+      title: "Growing Family?",
+      desc: "Tap this button to create profiles for your other children. You can switch between them instantly.",
+      position: 'bottom'
+    },
+    {
+      targetId: 'tutorial-share-btn',
+      title: "It Takes a Village",
+      desc: "Invite your partner or caregivers by email so everyone stays on the same page.",
+      position: 'bottom'
+    },
+    {
       targetId: 'tutorial-dashboard',
       title: "Daily Snapshots",
       desc: "Here is your quick summary for today. See total sleep, feeds, and diaper changes at a glance.",
@@ -48,6 +60,11 @@ const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
       title: "Manual Control",
       desc: "Prefer typing? Enter details here. \n\nDon't worry if you make a mistake—you can always review and edit the details before saving.",
       position: 'top'
+    },
+    {
+      targetId: undefined, // Centered modal for general concept
+      title: "You Are In Control",
+      desc: "After you speak or type, a Review Card will appear. You can adjust the time, add notes, or fix any details before confirming the entry.",
     }
   ];
 
