@@ -1,107 +1,291 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BabyLog - Product Requirements Document</title>
+    <title>BabyLog - Technical Documentation & PRD</title>
     <style>
+        :root {
+            --rust: #E76F51;
+            --sage: #2A9D8F;
+            --charcoal: #264653;
+            --sand: #E9C46A;
+            --cream: #FDFBF7;
+            --code-bg: #f4f4f4;
+        }
         body {
-            font-family: 'Calibri', 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 800px;
+            max-width: 960px;
             margin: 40px auto;
-            padding: 20px;
+            padding: 40px;
             background: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
         }
-        h1 { color: #E76F51; border-bottom: 2px solid #E76F51; padding-bottom: 10px; }
-        h2 { color: #264653; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        h3 { color: #2A9D8F; margin-top: 20px; }
-        code { background: #f4f4f4; padding: 2px 5px; border-radius: 4px; font-family: 'Consolas', monospace; color: #d63384; }
-        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; border-left: 5px solid #2A9D8F; }
-        ul { margin-bottom: 15px; }
-        li { margin-bottom: 5px; }
-        .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; color: white; margin-right: 5px; }
-        .tag.feat { background-color: #2A9D8F; }
-        .tag.tech { background-color: #264653; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #f8f8f8; }
-        .print-only { display: none; }
+        h1 { color: var(--rust); border-bottom: 3px solid var(--rust); padding-bottom: 15px; margin-bottom: 30px; font-size: 2.5em; }
+        h2 { color: var(--charcoal); margin-top: 40px; border-bottom: 1px solid #eee; padding-bottom: 8px; font-size: 1.8em; }
+        h3 { color: var(--sage); margin-top: 25px; font-size: 1.3em; font-weight: 600; }
+        h4 { color: #555; margin-top: 20px; font-weight: bold; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; }
+        
+        p { margin-bottom: 15px; }
+        
+        /* Badges */
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold; color: white; margin-right: 5px; vertical-align: middle; }
+        .badge.fe { background-color: var(--sage); } /* Frontend */
+        .badge.be { background-color: var(--rust); } /* Backend */
+        .badge.ai { background-color: #8E44AD; } /* AI */
+        .badge.sec { background-color: var(--charcoal); } /* Security */
+
+        /* Code & Tables */
+        code { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', monospace; color: #d63384; font-size: 0.9em; }
+        pre { background: var(--charcoal); color: #fff; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: 'Consolas', monospace; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.95em; }
+        th, td { border: 1px solid #e0e0e0; padding: 12px; text-align: left; }
+        th { background-color: #f9f9f9; color: var(--charcoal); font-weight: bold; }
+        tr:nth-child(even) { background-color: #fcfcfc; }
+
+        /* Process Flow Blocks */
+        .flow-container { background: #f8fcfb; border-left: 4px solid var(--sage); padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        .flow-step { display: flex; align-items: flex-start; margin-bottom: 15px; }
+        .step-num { min-width: 25px; height: 25px; background: var(--sage); color: white; border-radius: 50%; text-align: center; line-height: 25px; font-weight: bold; margin-right: 15px; font-size: 0.8em; margin-top: 2px; }
+        .step-content { flex: 1; }
+        .tech-ref { display: block; font-size: 0.85em; color: #666; margin-top: 4px; font-family: monospace; }
+
         @media print {
-            body { max-width: 100%; padding: 0; margin: 0; }
+            body { max-width: 100%; padding: 0; margin: 0; box-shadow: none; }
             .no-print { display: none; }
         }
     </style>
 </head>
 <body>
 
-    <div class="no-print" style="background: #eef; padding: 15px; border-radius: 5px; margin-bottom: 30px; border: 1px solid #ccf;">
-        <strong>Export Instructions:</strong>
-        <ul>
-            <li>To save as <strong>Word (.docx)</strong>: Right-click this file > Open with > Microsoft Word. Then "Save As" Word Document.</li>
-            <li>To save as <strong>PDF</strong>: Press Ctrl+P (Cmd+P) and select "Save as PDF".</li>
-        </ul>
+    <div class="no-print" style="text-align: right; font-size: 0.85em; color: #999;">
+        Document Generated: 2025-05-21
     </div>
 
-    <h1>Product Requirements Document (PRD)</h1>
-    <p><strong>Project:</strong> BabyLog (Local Edition)<br>
-    <strong>Version:</strong> 1.1.0 (Lite)<br>
-    <strong>Date:</strong> 2025-05-20</p>
-
-    <h2>1. Executive Summary</h2>
-    <p>BabyLog is a "voice-first" progressive web application designed for modern parents to track newborn activities. 
-    <strong>Version 1.1 switches to a Local-First architecture.</strong> Authentication is still handled via Google for security, but all baby data and logs are stored exclusively in the user's browser (Local Storage) ensuring privacy and speed without cloud database costs.</p>
-
-    <h2>2. User Personas</h2>
-    <ul>
-        <li><strong>The Privacy-Conscious Parent:</strong> Wants to track their baby's health but prefers keeping data on their own device rather than a remote cloud server.</li>
-        <li><strong>The Offline User:</strong> Needs the app to work flawlessly even when internet connectivity is spotty, syncing only authentication.</li>
-    </ul>
-
-    <h2>3. Technical Architecture</h2>
+    <h1>BabyLog Technical Documentation</h1>
     
-    <h3>Frontend</h3>
+    <div style="background: #FFF8E1; padding: 15px; border-radius: 8px; border: 1px solid #FFE082; margin-bottom: 30px;">
+        <strong>Project Status:</strong> Production Ready (Version 2.0)<br>
+        <strong>Core Value:</strong> Voice-first, AI-powered tracking with real-time cloud synchronization and family sharing.
+    </div>
+
+    <h2>1. System Architecture</h2>
+    <p>The application follows a <strong>Serverless / Thick-Client</strong> architecture. The React frontend handles all logic, audio recording, and direct communication with external APIs (Firebase & Google Gemini).</p>
+    
+    <table>
+        <tr>
+            <th width="20%">Layer</th>
+            <th width="30%">Technology</th>
+            <th>Role</th>
+        </tr>
+        <tr>
+            <td><strong>Frontend</strong></td>
+            <td>React 19, TypeScript, Tailwind CSS</td>
+            <td>UI rendering, State Management, Audio Capture (MediaRecorder API).</td>
+        </tr>
+        <tr>
+            <td><strong>Auth & DB</strong></td>
+            <td>Firebase Auth, Cloud Firestore</td>
+            <td>Identity management (Google Sign-In) and NoSQL document storage.</td>
+        </tr>
+        <tr>
+            <td><strong>Intelligence</strong></td>
+            <td>Google Gemini API (<code>gemini-3-flash-preview</code>)</td>
+            <td>Multimodal processing. Converts raw audio/text into structured JSON.</td>
+        </tr>
+        <tr>
+            <td><strong>Hosting</strong></td>
+            <td>Static Web Host (e.g., Vercel/Firebase Hosting)</td>
+            <td>Delivers the SPA bundle.</td>
+        </tr>
+    </table>
+
+    <h2>2. Core Process Flows</h2>
+
+    <h3>A. The "Magic" Logging Flow (Voice Input)</h3>
+    <p>This is the primary differentiator of the product. It allows hands-free logging.</p>
+    
+    <div class="flow-container">
+        <div class="flow-step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+                <strong>User Input</strong>: User taps the microphone button and speaks natural language (e.g., "Leo just drank 4oz of milk").
+                <span class="tech-ref">Component: <code>VoiceRecorder.tsx</code> | API: <code>navigator.mediaDevices.getUserMedia</code></span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+                <strong>Capture & Encoding</strong>: Audio is captured as chunks and compiled into a Blob (WebM or MP4).
+                <span class="tech-ref">Format: <code>audio/webm</code> or <code>audio/mp4</code></span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+                <strong>AI Processing</strong>: The Blob is converted to Base64 and sent to Gemini.
+                <br><em>Prompt Injection:</em> The system injects `Current User Time` into the prompt so the AI can resolve relative time (e.g., "10 minutes ago").
+                <span class="tech-ref">Service: <code>GeminiService.parseInput</code> | Model: <code>gemini-3-flash-preview</code></span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num">4</div>
+            <div class="step-content">
+                <strong>Structured Output</strong>: Gemini returns a JSON object adhering to the schema defined in `geminiService.ts`.
+                <span class="tech-ref">Returns: <code>ParseResult</code> (Type, StartTime, Details, Notes)</span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num">5</div>
+            <div class="step-content">
+                <strong>Human-in-the-loop Review</strong>: A modal appears allowing the user to correct the AI's inference before saving.
+                <span class="tech-ref">Component: <code>EventConfirmation.tsx</code></span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num">6</div>
+            <div class="step-content">
+                <strong>Persistence</strong>: Data is written to Firestore `events` collection.
+                <span class="tech-ref">Service: <code>StorageService.addEvent</code></span>
+            </div>
+        </div>
+    </div>
+
+    <h3>B. Family Sharing & Authorization Flow</h3>
+    <p>Enables multiple caregivers (parents, nannies, grandparents) to track the same baby.</p>
+
+    <div class="flow-container" style="border-left-color: var(--rust);">
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--rust);">1</div>
+            <div class="step-content">
+                <strong>Invitation</strong>: Owner clicks "Share", enters an email address (e.g., `spouse@gmail.com`).
+                <span class="tech-ref">Component: <code>ShareBabyModal.tsx</code></span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--rust);">2</div>
+            <div class="step-content">
+                <strong>Database Update</strong>: The email is added to the `allowedEmails` array on the Baby Profile document.
+                <span class="tech-ref">Firestore Operation: <code>arrayUnion('spouse@gmail.com')</code></span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--rust);">3</div>
+            <div class="step-content">
+                <strong>Security Check (Rule Evaluation)</strong>: When the invitee logs in, Firestore Security Rules check if `request.auth.token.email` exists in the `resource.data.allowedEmails` list.
+                <span class="tech-ref">File: <code>firestore.rules</code></span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--rust);">4</div>
+            <div class="step-content">
+                <strong>Sync</strong>: The invited user's dashboard automatically queries for all babies where their email is listed.
+                <span class="tech-ref">Query: <code>where("allowedEmails", "array-contains", userEmail)</code></span>
+            </div>
+        </div>
+    </div>
+
+    <h2>3. Data Dictionary (Firestore Schema)</h2>
+    
+    <h3>Collection: <code>babies</code></h3>
+    <table>
+        <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td><code>id</code></td>
+            <td>String (UUID)</td>
+            <td>Document ID.</td>
+        </tr>
+        <tr>
+            <td><code>name</code></td>
+            <td>String</td>
+            <td>Baby's display name.</td>
+        </tr>
+        <tr>
+            <td><code>ownerId</code></td>
+            <td>String (UID)</td>
+            <td>Firebase Auth UID of the creator. Has delete permissions.</td>
+        </tr>
+        <tr>
+            <td><code>allowedEmails</code></td>
+            <td>Array&lt;String&gt;</td>
+            <td>List of emails permitted to Read/Write events for this baby.</td>
+        </tr>
+    </table>
+
+    <h3>Collection: <code>events</code></h3>
+    <table>
+        <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td><code>babyId</code></td>
+            <td>String (Ref)</td>
+            <td>Links event to parent Baby profile.</td>
+        </tr>
+        <tr>
+            <td><code>type</code></td>
+            <td>String (Enum)</td>
+            <td><code>feed</code>, <code>sleep</code>, <code>diaper</code>, <code>symptom</code>, <code>measurement</code>, <code>note</code>.</td>
+        </tr>
+        <tr>
+            <td><code>startTime</code></td>
+            <td>ISO String</td>
+            <td>When the event occurred.</td>
+        </tr>
+        <tr>
+            <td><code>endTime</code></td>
+            <td>ISO String</td>
+            <td>Optional. Used for Sleep durations.</td>
+        </tr>
+        <tr>
+            <td><code>details</code></td>
+            <td>Map (JSON)</td>
+            <td>Flexible payload. <br>E.g., <code>{ amountml: 120, side: "left" }</code> for feeds.</td>
+        </tr>
+        <tr>
+            <td><code>createdByEmail</code></td>
+            <td>String</td>
+            <td>Audit trail of who logged the specific event.</td>
+        </tr>
+    </table>
+
+    <h2>4. Security & Permissions</h2>
+    <p>Access control is enforced at the database level using Firestore Security Rules.</p>
     <ul>
-        <li><span class="tag tech">Framework</span> <strong>React 19</strong>.</li>
-        <li><span class="tag tech">Language</span> <strong>TypeScript</strong>.</li>
-        <li><span class="tag tech">Styling</span> <strong>Tailwind CSS</strong>.</li>
+        <li><strong>Read/Write:</strong> Granted if User UID matches `ownerId` <strong>OR</strong> User Email is in `allowedEmails`.</li>
+        <li><strong>Delete Profile:</strong> Granted ONLY if User UID matches `ownerId`.</li>
+        <li><strong>Create Profile:</strong> Authenticated users only.</li>
     </ul>
 
-    <h3>Backend & Data</h3>
+    <h2>5. Feature Specifications</h2>
+    
+    <h3>Dashboard (Home)</h3>
     <ul>
-        <li><span class="tag tech">Auth</span> <strong>Firebase Authentication</strong> (Google Sign-In). Used solely to identify the user and namespace their local data.</li>
-        <li><span class="tag tech">Database</span> <strong>Browser Local Storage</strong>.
-            <ul>
-                <li><code>babylog:babies:{userId}</code>: JSON Array of profiles.</li>
-                <li><code>babylog:events:{babyId}</code>: JSON Array of event logs.</li>
-            </ul>
-        </li>
-        <li><span class="tag tech">AI</span> <strong>Google Gemini API</strong> (<code>gemini-3-flash-preview</code>).
-            <ul>
-                <li>Converts Audio/Text to JSON structured data.</li>
-            </ul>
-        </li>
+        <li><strong>Quick Stats:</strong> Aggregates for today's Feeds, Sleep duration, and Diaper counts.</li>
+        <li><strong>Date Navigation:</strong> Arrows to move context back in time.</li>
+        <li><strong>Baby Switcher:</strong> Horizontal scroll in header to switch active profile context.</li>
     </ul>
 
-    <h2>4. Key Features</h2>
-
-    <h3>A. Authentication</h3>
+    <h3>Visualization Modes</h3>
     <ul>
-        <li>Secure Google Sign-In (required to create a user namespace).</li>
-        <li>Data separation: Logging in as a different Google user reveals a different set of local data.</li>
+        <li><strong>List View (Timeline):</strong> Chronological, icon-coded list. Good for reviewing sequence.</li>
+        <li><strong>Calendar View:</strong> Vertical Gantt-style chart. Visualizes sleep blocks and event spacing.</li>
+        <li><strong>Report View:</strong> Tabular comparison of "Today" vs "Yesterday" vs "7-Day Average".</li>
     </ul>
 
-    <h3>B. Multimodal Input (Core)</h3>
+    <h3>Tutorial System</h3>
     <ul>
-        <li><span class="tag feat">Voice</span> One-tap recording using Web Audio API.</li>
-        <li><span class="tag feat">AI</span> Gemini processing to parse natural language into data.</li>
-    </ul>
-
-    <h3>C. Visualization & Management</h3>
-    <ul>
-        <li><strong>Dashboard:</strong> Daily aggregates (Feed, Sleep, Diaper).</li>
-        <li><strong>Timeline:</strong> Chronological list view.</li>
-        <li><strong>Calendar:</strong> 24h visual schedule.</li>
+        <li>Overlay system using <code>TutorialOverlay.tsx</code>.</li>
+        <li>Uses `localStorage` key <code>babylog:tutorial_seen:{uid}</code> to ensure it only runs once per user.</li>
+        <li>Calculates DOM element positions (`getBoundingClientRect`) to create a "spotlight" effect on specific buttons.</li>
     </ul>
 
 </body>

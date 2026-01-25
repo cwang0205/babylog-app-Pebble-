@@ -4,6 +4,7 @@ import { User } from 'firebase/auth';
 import { AuthService } from './services/authService';
 import { StorageService } from './services/storageService';
 import { GeminiService } from './services/geminiService';
+import { DataSeeder } from './services/dataSeeder'; // Import Seeder
 import { BabyEvent, BabyProfile, Gender, ParseResult } from './types';
 import VoiceRecorder from './components/VoiceRecorder';
 import EventList from './components/EventList';
@@ -13,7 +14,7 @@ import EventConfirmation from './components/EventConfirmation';
 import DayCalendarView from './components/DayCalendarView';
 import TutorialOverlay from './components/TutorialOverlay';
 import ShareBabyModal from './components/ShareBabyModal';
-import { PlusIcon, SendIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, UserPlusIcon } from './components/Icons';
+import { PlusIcon, SendIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, UserPlusIcon, BoltIcon } from './components/Icons';
 
 type ViewMode = 'list' | 'calendar' | 'report';
 
@@ -158,6 +159,24 @@ function App() {
     const newDate = new Date(selectedDate);
     newDate.setDate(selectedDate.getDate() + days);
     setSelectedDate(newDate);
+  };
+
+  // DEBUG TOOL: SEED DATA
+  const handleSeedData = async () => {
+    if (!currentBaby || !user || !user.email) return;
+    if (!window.confirm("⚠️ Developer Tool\n\nThis will add ~2 weeks of fake data (feeds, sleep, diapers) to this profile. Continue?")) return;
+
+    setIsProcessing(true);
+    try {
+      await DataSeeder.seedEvents(currentBaby.id, user.email);
+      alert("Success! 2 weeks of data added. Refreshing...");
+      loadEvents(currentBaby.id);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to seed data. Check console.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const processInput = async (text?: string, audioBlob?: Blob) => {
@@ -377,6 +396,18 @@ function App() {
           
           {/* Profile Switcher & Logout */}
           <div className="flex items-center gap-3">
+             {/* Dev Seed Button */}
+             {currentBaby && (
+               <button 
+                  onClick={handleSeedData}
+                  className="hidden md:flex items-center gap-1 bg-charcoal/5 text-charcoal/50 hover:bg-charcoal/10 hover:text-charcoal px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
+                  title="Generate Test Data"
+               >
+                 <BoltIcon className="w-3 h-3" />
+                 Seed Data
+               </button>
+             )}
+
              {/* Help Button */}
              <button 
                 onClick={() => setShowTutorial(true)}
