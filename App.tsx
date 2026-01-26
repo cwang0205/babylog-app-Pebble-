@@ -338,11 +338,11 @@ function App() {
       <div className="min-h-screen bg-cream flex flex-col items-center justify-center p-6 relative">
         
         <div className="text-center space-y-6 max-w-sm w-full animate-fade-in-up">
-           <div className="w-20 h-20 bg-rust rounded-full flex items-center justify-center text-white font-serif font-bold italic text-4xl mx-auto shadow-xl shadow-rust/30">
+           <div className="w-20 h-20 bg-rust rounded-full flex items-center justify-center text-white font-bold italic text-4xl mx-auto shadow-xl shadow-rust/30">
              B
            </div>
            <div>
-             <h1 className="text-4xl font-serif font-bold text-charcoal">BabyLog</h1>
+             <h1 className="text-4xl font-bold text-charcoal">BabyLog</h1>
              <p className="text-charcoal/60 mt-2 text-lg">Voice-first tracking for modern parents.</p>
            </div>
            
@@ -375,14 +375,14 @@ function App() {
       <div className="min-h-screen bg-cream flex flex-col justify-center items-center px-6 animate-fade-in-up">
         <div className="w-full max-w-md bg-surface p-8 rounded-3xl shadow-xl border border-subtle text-center">
           <div className="w-16 h-16 bg-sage/20 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">👶</div>
-          <h1 className="text-3xl font-serif font-bold text-charcoal mb-2">Welcome!</h1>
+          <h1 className="text-3xl font-bold text-charcoal mb-2">Welcome!</h1>
           <p className="text-charcoal/70 mb-8 font-sans">Let's create a profile for your little one.</p>
           
           <div className="text-left mb-6 space-y-4">
             <div>
               <label className="block text-sm font-bold text-charcoal/60 uppercase tracking-wider mb-2">Baby's Name</label>
               <input
-                className="w-full p-4 rounded-xl bg-subtle border-none text-lg font-serif focus:ring-2 focus:ring-rust outline-none transition-all"
+                className="w-full p-4 rounded-xl bg-subtle border-none text-lg font-bold focus:ring-2 focus:ring-rust outline-none transition-all"
                 placeholder="e.g. Leo"
                 value={newBabyName}
                 onChange={(e) => setNewBabyName(e.target.value)}
@@ -422,8 +422,8 @@ function App() {
       <div className="bg-cream px-6 pt-8 pb-4 max-w-5xl mx-auto w-full">
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <span className="w-8 h-8 bg-rust rounded-full flex items-center justify-center text-white font-serif font-bold italic">B</span>
-            <span className="font-serif font-bold text-xl text-charcoal">BabyLog</span>
+            <span className="w-8 h-8 bg-rust rounded-full flex items-center justify-center text-white font-bold italic">B</span>
+            <span className="font-bold text-xl text-charcoal">BabyLog</span>
           </div>
           
           {/* Profile Switcher & Logout */}
@@ -491,7 +491,7 @@ function App() {
         {/* Hero & Date Navigation */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in-up">
           <div>
-             <h1 className="text-3xl md:text-4xl font-serif text-charcoal">
+             <h1 className="text-3xl md:text-4xl font-bold text-charcoal">
                Daily Overview
              </h1>
              <div className="flex flex-wrap items-center gap-2 text-charcoal/60 mt-1 text-sm md:text-base">
@@ -536,7 +536,7 @@ function App() {
              </button>
              <div className="px-4 py-2 min-w-[140px] text-center">
                 <span className="block text-xs font-bold uppercase text-charcoal/40 tracking-wider">Viewing</span>
-                <span className="block font-serif font-bold text-charcoal">
+                <span className="block font-bold text-charcoal">
                   {selectedDate.toDateString() === new Date().toDateString() ? 'Today' : selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
              </div>
@@ -564,7 +564,7 @@ function App() {
         <div className="md:col-span-12 animate-fade-in-up stagger-2">
            <div className="flex items-center justify-between mb-4 mt-4">
              <div className="flex items-baseline gap-3">
-               <h2 className="font-serif text-xl text-charcoal">
+               <h2 className="font-bold text-xl text-charcoal">
                  {viewMode === 'list' ? 'Timeline' : viewMode === 'calendar' ? 'Schedule' : 'Analysis'}
                </h2>
                {filterCategory && (

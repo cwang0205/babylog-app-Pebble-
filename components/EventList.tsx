@@ -92,7 +92,7 @@ const EventList: React.FC<EventListProps> = ({ events, selectedDate, filterCateg
   if (dayEvents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-charcoal/40 bg-surface rounded-3xl border border-dashed border-subtle">
-        <p className="font-serif italic mb-1 text-lg">
+        <p className="italic mb-1 text-lg">
           {filterCategory ? `No ${filterCategory} events` : "Quiet day"}
         </p>
         <p className="text-base">

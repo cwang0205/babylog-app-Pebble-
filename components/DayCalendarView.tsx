@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useRef } from 'react';
 import { BabyEvent, EventType } from '../types';
 import { FeedIcon, MoonIcon, DiaperIcon, HeartIcon, BoltIcon, RulerIcon, PencilIcon } from './Icons';
@@ -95,7 +96,7 @@ const DayCalendarView: React.FC<Props> = ({ events, selectedDate, filterCategory
   return (
     <div className="bg-surface rounded-2xl shadow-sm border border-subtle h-[600px] flex flex-col overflow-hidden">
       <div className="p-4 border-b border-subtle bg-cream/50 flex justify-between items-center">
-        <h3 className="font-serif font-bold text-charcoal">Timeline</h3>
+        <h3 className="font-bold text-charcoal">Timeline</h3>
         <span className="text-xs uppercase font-bold text-charcoal/40">
           {selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
         </span>

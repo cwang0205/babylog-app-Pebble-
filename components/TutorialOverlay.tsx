@@ -205,7 +205,7 @@ const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
         className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-start text-left"
       >
         <div className="flex justify-between items-start w-full mb-3">
-           <h3 className="font-serif font-bold text-xl text-charcoal">{currentStep.title}</h3>
+           <h3 className="font-bold text-xl text-charcoal">{currentStep.title}</h3>
            <button onClick={onClose} className="text-charcoal/30 hover:text-charcoal p-1">
              <XMarkIcon className="w-5 h-5" />
            </button>

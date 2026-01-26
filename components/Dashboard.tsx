@@ -182,7 +182,7 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
       >
         <div className="flex flex-col gap-1">
            <div className="mt-1">
-              <span className="text-4xl font-serif font-bold">{stats.milk.count}</span>
+              <span className="text-4xl font-bold">{stats.milk.count}</span>
               <span className="text-base ml-2 opacity-70 font-bold">feeds</span>
            </div>
            
@@ -212,7 +212,7 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
       >
         <div className="flex flex-col gap-1">
           <div className="flex items-baseline justify-between mt-1">
-              <span className="text-3xl font-serif font-bold tracking-tight">{stats.sleep.total}</span>
+              <span className="text-3xl font-bold tracking-tight">{stats.sleep.total}</span>
            </div>
            
            <div className="text-sm opacity-70 font-bold mb-1">
@@ -245,7 +245,7 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
         <div className="flex justify-between h-full pt-1">
            {/* Wet Column */}
            <div className="flex flex-col items-center flex-1 border-r border-sand/20 pr-1">
-              <span className="text-3xl font-serif font-bold">{stats.diaper.wet}</span>
+              <span className="text-3xl font-bold">{stats.diaper.wet}</span>
               <span className="text-xs uppercase font-bold opacity-60 mb-1">Wet</span>
               <div className="mt-auto pt-2 w-full text-center border-t border-sand/10">
                  <span className="block text-xs font-bold opacity-80 whitespace-nowrap">{recency.wetTime || '--'}</span>
@@ -254,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
            
            {/* Dirty Column */}
            <div className="flex flex-col items-center flex-1 pl-1">
-              <span className="text-3xl font-serif font-bold">{stats.diaper.dirty}</span>
+              <span className="text-3xl font-bold">{stats.diaper.dirty}</span>
               <span className="text-xs uppercase font-bold opacity-60 mb-1">Dirty</span>
               <div className="mt-auto pt-2 w-full text-center border-t border-sand/10">
                  <span className="block text-xs font-bold opacity-80 whitespace-nowrap">{recency.dirtyTime || '--'}</span>
@@ -273,7 +273,7 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
         onClick={() => handleToggle('wellness')} 
       >
         <div className="mt-1">
-          <span className="text-4xl font-serif font-bold">{stats.wellness.count}</span>
+          <span className="text-4xl font-bold">{stats.wellness.count}</span>
           <span className="text-base ml-2 opacity-70 font-bold">Logs</span>
         </div>
         <div className="mt-2 text-xs opacity-60 font-bold line-clamp-1">

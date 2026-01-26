@@ -63,7 +63,7 @@ const EventConfirmation: React.FC<Props> = ({ data, mode = 'create', onConfirm, 
         
         <div className="bg-cream border-b border-subtle p-6 flex justify-between items-start">
           <div className="text-center w-full">
-            <h2 className="text-2xl font-serif font-bold text-charcoal">
+            <h2 className="text-2xl font-bold text-charcoal">
               {mode === 'edit' ? 'Edit Activity' : 'Just to be sure...'}
             </h2>
             <p className="text-charcoal/60 text-sm mt-1">

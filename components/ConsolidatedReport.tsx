@@ -130,7 +130,7 @@ const ConsolidatedReport: React.FC<ReportProps> = ({ events, selectedDate }) => 
     <div className={`grid grid-cols-4 gap-4 py-3 items-center ${!isHeader ? 'border-b border-subtle last:border-0 hover:bg-subtle/30 transition-colors' : 'pb-2 border-b-2 border-subtle'}`}>
       
       {/* Label Column */}
-      <div className={`${isHeader ? 'text-xs uppercase tracking-wider text-charcoal/50 font-bold' : 'font-serif font-bold text-charcoal text-sm'}`}>
+      <div className={`${isHeader ? 'text-xs uppercase tracking-wider text-charcoal/50 font-bold' : 'font-bold text-charcoal text-sm'}`}>
         {label}
       </div>
 
@@ -168,7 +168,7 @@ const ConsolidatedReport: React.FC<ReportProps> = ({ events, selectedDate }) => 
       {/* Main Consolidation Table */}
       <div className="lg:col-span-8 bg-surface rounded-3xl shadow-sm border border-subtle p-8 flex flex-col">
         <div className="mb-6">
-            <h3 className="font-serif font-bold text-2xl text-charcoal">Daily Report</h3>
+            <h3 className="font-bold text-2xl text-charcoal">Daily Report</h3>
         </div>
         
         {/* Table Headers */}
@@ -244,7 +244,7 @@ const ConsolidatedReport: React.FC<ReportProps> = ({ events, selectedDate }) => 
 
       {/* Health Log Side Panel (Cols 9-12) */}
       <div className="lg:col-span-4 bg-cream/50 rounded-3xl border border-subtle p-6 flex flex-col gap-4 h-fit">
-        <h3 className="font-serif font-bold text-lg text-charcoal border-b border-subtle pb-3">Health Log (30 Days)</h3>
+        <h3 className="font-bold text-lg text-charcoal border-b border-subtle pb-3">Health Log (30 Days)</h3>
         
         {metrics.healthLog.length === 0 ? (
           <div className="text-center py-8 text-charcoal/40">

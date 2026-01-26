@@ -66,7 +66,7 @@ const ShareBabyModal: React.FC<Props> = ({ baby, onClose, currentUserEmail, curr
         
         <div className="bg-cream border-b border-subtle p-6 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-serif font-bold text-charcoal">Family Access</h2>
+            <h2 className="text-xl font-bold text-charcoal">Family Access</h2>
             <p className="text-charcoal/60 text-xs">Manage who can see {baby.name}</p>
           </div>
           <button onClick={onClose} className="text-charcoal/30 hover:text-charcoal">
