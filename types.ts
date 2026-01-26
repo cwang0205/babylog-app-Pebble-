@@ -38,9 +38,10 @@ export interface BabyEvent {
 
 // Specific detail interfaces for type safety in UI
 export interface FeedDetails {
-  method: 'bottle' | 'breast';
+  method: 'bottle' | 'breast' | 'solid';
   amountml?: number;
   side?: 'left' | 'right' | 'both';
+  item?: string; // For solids (e.g. "Banana")
 }
 
 export interface DiaperDetails {

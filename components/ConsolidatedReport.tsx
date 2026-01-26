@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { BabyEvent, EventType } from '../types';
 
@@ -23,186 +24,259 @@ const ConsolidatedReport: React.FC<ReportProps> = ({ events, selectedDate }) => 
 
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - 6); // 7 days including today
+    
+    // For Health Log: 30 days ago
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     // 2. Metrics Containers
+    const initialMetric = { 
+      bottleCount: 0,
+      bottleVol: 0, 
+      breastCount: 0,
+      solidCount: 0, 
+      sleepDur: 0, 
+      sleepCount: 0, 
+      wet: 0, 
+      dirty: 0 
+    };
+
     const metrics = {
-      today: { feed: 0, sleep: 0, diaper: 0 },
-      yesterday: { feed: 0, sleep: 0, diaper: 0 },
-      weekTotal: { feed: 0, sleep: 0, diaper: 0 },
-      last: {
-        weight: null as any,
-        height: null as any,
-        symptom: null as any,
-        note: null as any,
-        event: null as any,
-      }
+      today: { ...initialMetric },
+      yesterday: { ...initialMetric },
+      weekTotal: { ...initialMetric },
+      healthLog: [] as BabyEvent[]
     };
 
     // 3. Iterate & Aggregate
-    // Sort events newest first for "Last" checks
+    // Events are typically sorted desc (newest first) from props
     const sorted = [...events].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
     
-    if (sorted.length > 0) {
-      metrics.last.event = sorted[0];
-    }
-
     sorted.forEach(e => {
       const eDate = new Date(e.startTime);
       eDate.setHours(0,0,0,0);
       const isToday = eDate.getTime() === today.getTime();
       const isYesterday = eDate.getTime() === yesterday.getTime();
       const isThisWeek = eDate.getTime() >= weekStart.getTime() && eDate.getTime() <= today.getTime();
+      const isLast30Days = new Date(e.startTime).getTime() >= thirtyDaysAgo.getTime();
 
-      // Health Snapshots (First match due to sort is the latest)
-      if (!metrics.last.weight && e.type === EventType.MEASUREMENT && (e.details as any).type === 'weight') {
-        metrics.last.weight = e;
-      }
-      if (!metrics.last.height && e.type === EventType.MEASUREMENT && (e.details as any).type === 'height') {
-        metrics.last.height = e;
-      }
-      if (!metrics.last.symptom && e.type === EventType.SYMPTOM) {
-        metrics.last.symptom = e;
-      }
-      if (!metrics.last.note && e.type === EventType.NOTE) {
-        metrics.last.note = e;
-      }
+      const updateMetric = (target: typeof initialMetric) => {
+        // Routine Aggregations
+        if (e.type === EventType.FEED) {
+          const method = e.details?.method;
+          
+          if (method === 'solid') {
+            target.solidCount++;
+          } else if (method === 'breast') {
+            target.breastCount++;
+          } else {
+            // Assume bottle if not solid or breast (or if specifically bottle)
+            target.bottleCount++;
+            if (e.details?.amountml) {
+              target.bottleVol += e.details.amountml;
+            }
+          }
+        } else if (e.type === EventType.DIAPER) {
+          const isDirty = e.details?.status === 'dirty' || e.details?.status === 'mixed';
+          isDirty ? target.dirty++ : target.wet++;
+        } else if (e.type === EventType.SLEEP) {
+          // Count
+          target.sleepCount++;
 
-      // Routine Aggregations
-      if (e.type === EventType.FEED) {
-        if (isToday) metrics.today.feed++;
-        if (isYesterday) metrics.yesterday.feed++;
-        if (isThisWeek) metrics.weekTotal.feed++;
-      } else if (e.type === EventType.DIAPER) {
-        if (isToday) metrics.today.diaper++;
-        if (isYesterday) metrics.yesterday.diaper++;
-        if (isThisWeek) metrics.weekTotal.diaper++;
-      } else if (e.type === EventType.SLEEP && e.endTime) {
-        const start = new Date(e.startTime).getTime();
-        const end = new Date(e.endTime).getTime();
-        // Round to nearest minute to be robust against dirty data
-        const mins = Math.round((end - start) / 60000);
-        
-        if (isToday) metrics.today.sleep += mins;
-        if (isYesterday) metrics.yesterday.sleep += mins;
-        if (isThisWeek) metrics.weekTotal.sleep += mins;
+          // Duration
+          if (e.endTime) {
+            const start = new Date(e.startTime).getTime();
+            const end = new Date(e.endTime).getTime();
+            const mins = Math.round((end - start) / 60000);
+            target.sleepDur += mins;
+          }
+        }
+      };
+
+      if (isToday) updateMetric(metrics.today);
+      if (isYesterday) updateMetric(metrics.yesterday);
+      if (isThisWeek) updateMetric(metrics.weekTotal);
+
+      // Gather Health Log Data (Symptoms & Temps)
+      if (isLast30Days) {
+         if (e.type === EventType.SYMPTOM) {
+           metrics.healthLog.push(e);
+         }
+         // Include High Temp or just general temp checks? Let's include all temps for context
+         if (e.type === EventType.MEASUREMENT && (e.details as any).type === 'temperature') {
+           metrics.healthLog.push(e);
+         }
       }
     });
 
     return {
       metrics,
       averages: {
-        feed: Math.round(metrics.weekTotal.feed / 7),
-        sleep: metrics.weekTotal.sleep / 7,
-        diaper: Math.round(metrics.weekTotal.diaper / 7),
+        bottleCount: Math.round(metrics.weekTotal.bottleCount / 7),
+        bottleVol: Math.round(metrics.weekTotal.bottleVol / 7),
+        breastCount: Math.round(metrics.weekTotal.breastCount / 7),
+        solidCount: Math.round(metrics.weekTotal.solidCount / 7 * 10) / 10,
+        sleepDur: metrics.weekTotal.sleepDur / 7,
+        sleepCount: Math.round(metrics.weekTotal.sleepCount / 7),
+        wet: Math.round(metrics.weekTotal.wet / 7),
+        dirty: Math.round(metrics.weekTotal.dirty / 7),
       }
     };
   }, [events, selectedDate]);
 
   const { metrics, averages } = reportData;
 
-  const RowItem = ({ label, today, yesterday, total, avg, unit = '' }: any) => (
-    <div className="grid grid-cols-4 gap-2 py-4 border-b border-subtle last:border-0 items-center">
-      <div className="font-bold text-charcoal">{label}</div>
-      <div className="text-center md:text-left text-rust font-bold text-lg">{today}<span className="text-xs font-normal text-charcoal/50 ml-1">{unit}</span></div>
-      <div className="text-center md:text-left hidden md:block text-charcoal/70">{yesterday}<span className="text-xs text-charcoal/40 ml-1">{unit}</span></div>
-      <div className="text-center md:text-left text-charcoal/70">{avg}<span className="text-xs text-charcoal/40 ml-1">{unit}</span></div>
+  const RowItem = ({ label, today, yesterday, avg, unit = '', isHeader = false, subValueToday, subValueYest, subValueAvg }: any) => (
+    <div className={`grid grid-cols-4 gap-4 py-3 items-center ${!isHeader ? 'border-b border-subtle last:border-0 hover:bg-subtle/30 transition-colors' : 'pb-2 border-b-2 border-subtle'}`}>
+      
+      {/* Label Column */}
+      <div className={`${isHeader ? 'text-xs uppercase tracking-wider text-charcoal/50 font-bold' : 'font-serif font-bold text-charcoal text-sm'}`}>
+        {label}
+      </div>
+
+      {/* Today Column */}
+      <div className={`text-center md:text-left ${isHeader ? 'text-xs uppercase tracking-wider text-charcoal/50 font-bold' : 'font-bold text-charcoal'}`}>
+        {today}<span className="text-xs font-normal text-charcoal/50 ml-1">{unit}</span>
+        {subValueToday && <span className="text-xs text-charcoal/50 ml-1 font-normal bg-subtle px-1 rounded">{subValueToday}</span>}
+      </div>
+
+      {/* Yesterday Column */}
+      <div className={`text-center md:text-left hidden md:block ${isHeader ? 'text-xs uppercase tracking-wider text-charcoal/50 font-bold' : 'text-charcoal/70 text-sm'}`}>
+        {yesterday}<span className="text-xs text-charcoal/40 ml-1">{unit}</span>
+        {subValueYest && <span className="text-[10px] text-charcoal/40 ml-1 bg-subtle px-1 rounded">{subValueYest}</span>}
+      </div>
+
+      {/* Avg Column */}
+      <div className={`text-center md:text-left ${isHeader ? 'text-xs uppercase tracking-wider text-charcoal/50 font-bold' : 'text-charcoal/70 text-sm'}`}>
+        {avg}<span className="text-xs text-charcoal/40 ml-1">{unit}</span>
+        {subValueAvg && <span className="text-[10px] text-charcoal/40 ml-1 bg-subtle px-1 rounded">{subValueAvg}</span>}
+      </div>
+    </div>
+  );
+
+  const SectionHeader = ({ title }: { title: string }) => (
+    <div className="mt-6 mb-2 flex items-center gap-2">
+      <div className="h-[1px] bg-rust/20 flex-1"></div>
+      <span className="text-xs font-bold text-rust uppercase tracking-widest">{title}</span>
+      <div className="h-[1px] bg-rust/20 flex-1"></div>
     </div>
   );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
       
-      {/* Main Consolidation Table (Cols 1-8) */}
-      <div className="lg:col-span-8 bg-surface rounded-2xl shadow-sm border border-subtle p-6 flex flex-col">
-        <div className="mb-4">
-            <h3 className="font-serif font-bold text-xl text-charcoal">Daily Report</h3>
-            <p className="text-xs text-charcoal/50">Comparison based on selected date</p>
+      {/* Main Consolidation Table */}
+      <div className="lg:col-span-8 bg-surface rounded-3xl shadow-sm border border-subtle p-8 flex flex-col">
+        <div className="mb-6">
+            <h3 className="font-serif font-bold text-2xl text-charcoal">Daily Report</h3>
         </div>
         
         {/* Table Headers */}
-        <div className="grid grid-cols-4 gap-2 pb-2 border-b-2 border-subtle text-xs font-bold uppercase tracking-wider text-charcoal/50">
-          <div>Metric</div>
-          <div>Today</div>
-          <div className="hidden md:block">Yesterday</div>
-          <div>7-Day Avg</div>
-        </div>
+        <RowItem 
+          label="Metric" 
+          today="Today" 
+          yesterday="Yesterday" 
+          avg="7-Day Avg" 
+          isHeader={true}
+        />
 
-        {/* Rows */}
+        {/* FEED SECTION */}
+        <SectionHeader title="Nutrition" />
+        
+        {/* Bottle Milk: Shows Count (Volume ml) */}
         <RowItem 
-          label="Feeds" 
-          today={metrics.today.feed} 
-          yesterday={metrics.yesterday.feed} 
-          avg={averages.feed} 
-        />
-        <RowItem 
-          label="Sleep" 
-          today={formatDuration(metrics.today.sleep)} 
-          yesterday={formatDuration(metrics.yesterday.sleep)} 
-          avg={formatDuration(averages.sleep)} 
-        />
-        <RowItem 
-          label="Diapers" 
-          today={metrics.today.diaper} 
-          yesterday={metrics.yesterday.diaper} 
-          avg={averages.diaper} 
+          label="Bottle Milk" 
+          today={metrics.today.bottleCount} 
+          subValueToday={metrics.today.bottleVol > 0 ? `${metrics.today.bottleVol}ml` : null}
+          yesterday={metrics.yesterday.bottleCount} 
+          subValueYest={metrics.yesterday.bottleVol > 0 ? `${metrics.yesterday.bottleVol}ml` : null}
+          avg={averages.bottleCount} 
+          subValueAvg={averages.bottleVol > 0 ? `${averages.bottleVol}ml` : null}
         />
         
-        <div className="mt-4 pt-4 border-t border-subtle flex justify-between items-center text-xs text-charcoal/40">
-           <span>Weekly Total Feeds: {metrics.weekTotal.feed}</span>
-           <span>Weekly Sleep: {formatDuration(metrics.weekTotal.sleep)}</span>
-        </div>
+        <RowItem 
+          label="Breast Feed" 
+          today={metrics.today.breastCount} 
+          yesterday={metrics.yesterday.breastCount} 
+          avg={averages.breastCount} 
+        />
+        
+        <RowItem 
+          label="Solids" 
+          today={metrics.today.solidCount} 
+          yesterday={metrics.yesterday.solidCount} 
+          avg={averages.solidCount} 
+        />
+
+        {/* SLEEP SECTION */}
+        <SectionHeader title="Sleep" />
+        
+        <RowItem 
+          label="Naps" 
+          today={metrics.today.sleepCount} 
+          yesterday={metrics.yesterday.sleepCount} 
+          avg={averages.sleepCount} 
+        />
+        <RowItem 
+          label="Total Sleep" 
+          today={formatDuration(metrics.today.sleepDur)} 
+          yesterday={formatDuration(metrics.yesterday.sleepDur)} 
+          avg={formatDuration(averages.sleepDur)} 
+        />
+
+        {/* DIAPER SECTION */}
+        <SectionHeader title="Hygiene" />
+        
+        <RowItem 
+          label="Wet" 
+          today={metrics.today.wet} 
+          yesterday={metrics.yesterday.wet} 
+          avg={averages.wet} 
+        />
+        <RowItem 
+          label="Dirty" 
+          today={metrics.today.dirty} 
+          yesterday={metrics.yesterday.dirty} 
+          avg={averages.dirty} 
+        />
+        
       </div>
 
-      {/* Latest / Health Side Panel (Cols 9-12) */}
-      <div className="lg:col-span-4 bg-cream/50 rounded-2xl border border-subtle p-6 flex flex-col gap-4">
-        <h3 className="font-serif font-bold text-lg text-charcoal">Latest Updates</h3>
+      {/* Health Log Side Panel (Cols 9-12) */}
+      <div className="lg:col-span-4 bg-cream/50 rounded-3xl border border-subtle p-6 flex flex-col gap-4 h-fit">
+        <h3 className="font-serif font-bold text-lg text-charcoal border-b border-subtle pb-3">Health Log (30 Days)</h3>
         
-        {/* Last Event */}
-        <div className="bg-white p-3 rounded-xl border border-subtle shadow-sm">
-           <div className="text-[10px] uppercase font-bold text-charcoal/40 mb-1">Last Activity</div>
-           <div className="font-bold text-charcoal capitalize">
-             {metrics.last.event ? metrics.last.event.type : 'None'}
-           </div>
-           <div className="text-xs text-charcoal/60">
-             {metrics.last.event ? new Date(metrics.last.event.startTime).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '--'}
-           </div>
-        </div>
-
-        {/* Health / Measurement Snapshot */}
-        <div className="bg-white p-3 rounded-xl border border-subtle shadow-sm">
-           <div className="text-[10px] uppercase font-bold text-sky-500 mb-2 border-b border-subtle pb-1">Latest Growth</div>
-           
-           <div className="grid grid-cols-2 gap-2">
-             <div>
-               <div className="text-[10px] text-charcoal/50 uppercase font-bold">Weight</div>
-               <div className="font-bold text-charcoal">
-                 {metrics.last.weight ? `${(metrics.last.weight.details as any).value} ${(metrics.last.weight.details as any).unit}` : '--'}
+        {metrics.healthLog.length === 0 ? (
+          <div className="text-center py-8 text-charcoal/40">
+            <span className="block text-2xl mb-2">😊</span>
+            <p className="text-sm font-bold">No issues recorded</p>
+            <p className="text-xs mt-1">Symptoms and temperature logs will appear here for doctor visits.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+             {metrics.healthLog.slice(0, 10).map(event => (
+               <div key={event.id} className="bg-white p-3 rounded-xl border border-subtle shadow-sm flex flex-col gap-1">
+                 <div className="flex justify-between items-start">
+                   <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 rounded ${event.type === EventType.SYMPTOM ? 'bg-rose-100 text-rose-600' : 'bg-sky-100 text-sky-600'}`}>
+                      {event.type === EventType.SYMPTOM ? 'Symptom' : 'Temp'}
+                   </span>
+                   <span className="text-[10px] text-charcoal/40 font-bold">
+                     {new Date(event.startTime).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                   </span>
+                 </div>
+                 
+                 <div className="font-bold text-charcoal text-sm mt-1">
+                   {event.type === EventType.SYMPTOM 
+                      ? (event.details as any).description 
+                      : `${(event.details as any).value}${(event.details as any).unit}`}
+                 </div>
+                 {event.notes && (
+                   <div className="text-xs text-charcoal/60 italic">"{event.notes}"</div>
+                 )}
                </div>
-               {metrics.last.weight && <div className="text-[10px] text-charcoal/40">{new Date(metrics.last.weight.startTime).toLocaleDateString()}</div>}
-             </div>
-             
-             <div>
-               <div className="text-[10px] text-charcoal/50 uppercase font-bold">Height</div>
-               <div className="font-bold text-charcoal">
-                 {metrics.last.height ? `${(metrics.last.height.details as any).value} ${(metrics.last.height.details as any).unit}` : '--'}
-               </div>
-               {metrics.last.height && <div className="text-[10px] text-charcoal/40">{new Date(metrics.last.height.startTime).toLocaleDateString()}</div>}
-             </div>
-           </div>
-        </div>
-
-        {/* Symptoms Alert */}
-        <div className={`p-3 rounded-xl border shadow-sm ${metrics.last.symptom ? 'bg-rose-50 border-rose-100' : 'bg-white border-subtle'}`}>
-           <div className={`text-[10px] uppercase font-bold mb-1 ${metrics.last.symptom ? 'text-rose-500' : 'text-charcoal/40'}`}>Recent Symptom</div>
-           <div className="font-bold text-charcoal">
-             {metrics.last.symptom ? (metrics.last.symptom.details as any).description : 'No symptoms'}
-           </div>
-           {metrics.last.symptom && (
-             <div className="text-xs text-charcoal/60 mt-1">
-                {new Date(metrics.last.symptom.startTime).toLocaleDateString()}
-             </div>
-           )}
-        </div>
+             ))}
+          </div>
+        )}
 
       </div>
     </div>

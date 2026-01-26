@@ -5,7 +5,7 @@ import { AuthService } from './services/authService';
 import { StorageService } from './services/storageService';
 import { GeminiService } from './services/geminiService';
 import { DataSeeder } from './services/dataSeeder'; // Import Seeder
-import { BabyEvent, BabyProfile, Gender, ParseResult } from './types';
+import { BabyEvent, BabyProfile, Gender, ParseResult, EventType } from './types';
 import VoiceRecorder from './components/VoiceRecorder';
 import EventList from './components/EventList';
 import Dashboard, { FilterCategory } from './components/Dashboard';
@@ -255,6 +255,22 @@ function App() {
     loadEvents(currentBaby.id);
   };
 
+  const handleDeleteEvent = async () => {
+    if (!editingEventId || !currentBaby) return;
+    
+    if (window.confirm("Are you sure you want to delete this event? This cannot be undone.")) {
+      try {
+        await StorageService.deleteEvent(editingEventId);
+        setPendingEvent(null);
+        setEditingEventId(null);
+        loadEvents(currentBaby.id);
+      } catch (e) {
+        console.error("Failed to delete event", e);
+        alert("Failed to delete event.");
+      }
+    }
+  };
+
   const calculateAge = (birthDateStr: string) => {
     const birth = new Date(birthDateStr);
     const now = new Date();
@@ -289,6 +305,22 @@ function App() {
       setIsLoggingIn(false);
     }
   };
+
+  // Helper to extract latest growth stats
+  const getLatestGrowth = () => {
+    if (!events || events.length === 0) return { weight: null, height: null };
+    
+    // Events are already sorted DESC by time in StorageService, so we can find the first occurrence
+    const weightEvent = events.find(e => e.type === EventType.MEASUREMENT && e.details?.type === 'weight');
+    const heightEvent = events.find(e => e.type === EventType.MEASUREMENT && e.details?.type === 'height');
+
+    return {
+      weight: weightEvent ? `${weightEvent.details.value}${weightEvent.details.unit}` : null,
+      height: heightEvent ? `${heightEvent.details.value}${heightEvent.details.unit}` : null
+    };
+  };
+  
+  const growthStats = getLatestGrowth();
 
   // --- RENDERING ---
 
@@ -462,23 +494,38 @@ function App() {
              <h1 className="text-3xl md:text-4xl font-serif text-charcoal">
                Daily Overview
              </h1>
-             <div className="flex items-center gap-2 text-charcoal/60 mt-1">
-               <span className="font-bold">{currentBaby?.name}</span>
+             <div className="flex flex-wrap items-center gap-2 text-charcoal/60 mt-1 text-sm md:text-base">
+               <span className="font-bold text-charcoal">{currentBaby?.name}</span>
                
                {/* Share Button */}
                {currentBaby && (
                  <button 
                    id="tutorial-share-btn"
                    onClick={() => setShowShareModal(true)}
-                   className="ml-2 flex items-center gap-1 bg-sage/10 text-sage hover:bg-sage/20 px-2 py-0.5 rounded-full text-xs font-bold transition-colors"
+                   className="flex items-center gap-1 bg-sage/10 text-sage hover:bg-sage/20 px-2 py-0.5 rounded-full text-xs font-bold transition-colors mr-1"
                  >
                    <UserPlusIcon className="w-3 h-3" />
                    <span>Share</span>
                  </button>
                )}
                
-               <span className="mx-1">•</span>
+               <span className="text-charcoal/30">•</span>
                <span>{currentBaby ? calculateAge(currentBaby.birthDate) : ''}</span>
+
+               {/* Latest Growth Stats in Header */}
+               {growthStats.weight && (
+                 <>
+                   <span className="text-charcoal/30">•</span>
+                   <span className="font-semibold text-charcoal/80">{growthStats.weight}</span>
+                 </>
+               )}
+               {growthStats.height && (
+                 <>
+                   <span className="text-charcoal/30">•</span>
+                   <span className="font-semibold text-charcoal/80">{growthStats.height}</span>
+                 </>
+               )}
+
              </div>
           </div>
 
@@ -641,6 +688,7 @@ function App() {
           mode={editingEventId ? 'edit' : 'create'}
           onConfirm={saveEvent} 
           onCancel={cancelEdit} 
+          onDelete={editingEventId ? handleDeleteEvent : undefined}
         />
       )}
     </div>

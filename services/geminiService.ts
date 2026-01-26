@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ParseResult, EventType } from "../types";
 
@@ -17,17 +18,25 @@ Your job is to interpret user inputs (voice audio or text) and extract structure
 The current local time of the user is provided in the prompt. Use it to calculate exact timestamps for relative times like "10 minutes ago" or "at 8pm".
 
 The supported event types are:
-- feed (bottle, breast, amount, side)
+- feed:
+    - method: 'bottle', 'breast', or 'solid' (if user mentions food, puree, cereal, eating solids).
+    - amountml: amount in ml (convert oz to ml if needed: 1oz = 30ml).
+    - side: 'left', 'right', 'both' (only for breast).
 - sleep (start time, end time if specified)
-- diaper (wet, dirty, mixed, color, texture)
+- diaper (wet, dirty). Note: If 'poop' or 'dirty', mark status as 'dirty'. If just 'pee', mark 'wet'.
 - symptom (cough, fever, rash, etc.)
 - movement (kicks, rolling)
 - measurement (weight, height, temperature)
 - note (general observations)
 
+For measurement events, strictly use the following units:
+- Weight: 'lb'
+- Height: 'in'
+- Temperature: '°F'
+
 Return a JSON object matching the requested schema. 
 If information is missing, infer logically or leave fields null/undefined.
-For 'details', create a flat object with relevant properties (e.g., { "side": "left", "durationMinutes": 15 }).
+For 'details', create a flat object with relevant properties.
 `;
 
 export const GeminiService = {
@@ -63,8 +72,6 @@ export const GeminiService = {
     }
     
     // Add Contextual Time (Local System Time)
-    // Using toString() gives "Day Mon DD YYYY HH:MM:SS GMT-XXXX (Timezone)" 
-    // This allows Gemini to know the user's actual offset.
     parts.push({ text: `Current User Time: ${new Date().toString()}` });
 
     // Define JSON Schema for structured output
@@ -87,16 +94,17 @@ export const GeminiService = {
         },
         details: {
           type: Type.OBJECT,
-          description: "Key-value pairs specific to the event type (e.g. amountml, side, status)",
+          description: "Key-value pairs specific to the event type",
           nullable: true,
           properties: {
-             method: { type: Type.STRING, nullable: true },
+             method: { type: Type.STRING, nullable: true, description: "bottle, breast, or solid" },
              amountml: { type: Type.NUMBER, nullable: true },
              side: { type: Type.STRING, nullable: true },
-             status: { type: Type.STRING, nullable: true },
+             status: { type: Type.STRING, nullable: true, description: "wet or dirty" },
              value: { type: Type.NUMBER, nullable: true },
              unit: { type: Type.STRING, nullable: true },
-             description: { type: Type.STRING, nullable: true }
+             description: { type: Type.STRING, nullable: true },
+             item: { type: Type.STRING, nullable: true, description: "Name of solid food (e.g. Avocado)" }
           }
         },
         notes: {
@@ -125,7 +133,6 @@ export const GeminiService = {
       const result = JSON.parse(jsonText) as ParseResult;
 
       // --- NORMALIZE TIME (Round to Minute) ---
-      // We strip seconds and milliseconds to ensure clean duration calculations.
       if (result.startTime) {
         const d = new Date(result.startTime);
         d.setSeconds(0, 0);

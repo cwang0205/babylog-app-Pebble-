@@ -124,12 +124,15 @@ export const DataSeeder = {
       // --- 4. MEASUREMENTS (Once a week) ---
       if (i % 7 === 0) {
          const weightRef = doc(eventsRef);
+         // Simulate weight gain from 10lb up to ~11lb over 2 weeks
+         const baseWeight = 10.0;
+         const gain = 0.1 * (DAYS_TO_SEED - i);
          batch.set(weightRef, {
            babyId,
            type: EventType.MEASUREMENT,
            startTime: fuzzyTime(date, 9 * 60).toISOString(),
            endTime: null,
-           details: { type: 'weight', value: 4.5 + (0.1 * (DAYS_TO_SEED - i)), unit: 'kg' }, // Gaining weight
+           details: { type: 'weight', value: parseFloat((baseWeight + gain).toFixed(2)), unit: 'lb' }, 
            createdAt: new Date().toISOString(),
            createdByEmail: userEmail
          });

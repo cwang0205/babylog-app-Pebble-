@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BabyLog - Smart Baby Tracker</title>
-    <!-- Fonts: Merriweather (Serif) & Nunito Sans (Clean Sans) -->
+    <!-- Fonts: Fraunces (Soft, Modern Serif) & Plus Jakarta Sans (Modern Geometric Sans) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -25,8 +25,8 @@
               subtle: '#F4F1EA'
             },
             fontFamily: {
-              serif: ['Merriweather', 'serif'],
-              sans: ['Nunito Sans', 'sans-serif'],
+              serif: ['Fraunces', 'serif'],
+              sans: ['Plus Jakarta Sans', 'sans-serif'],
             },
             animation: {
               'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
@@ -46,11 +46,19 @@
       body {
         background-color: #FDFBF7; /* Cream */
         color: #264653; /* Charcoal */
-        font-family: 'Nunito Sans', sans-serif;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
       h1, h2, h3, h4, h5, h6 {
-        font-family: 'Merriweather', serif;
+        font-family: 'Fraunces', serif;
+        font-variation-settings: "SOFT" 100, "WONK" 0; 
       }
+      /* Adjust numbers in serif to be monospaced or tabular if needed, but Fraunces handles them well */
+      .font-serif {
+        font-family: 'Fraunces', serif;
+      }
+      
       .no-scrollbar::-webkit-scrollbar {
         display: none;
       }

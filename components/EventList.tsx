@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { BabyEvent, EventType } from '../types';
 import { FeedIcon, MoonIcon, DiaperIcon, HeartIcon, BoltIcon, RulerIcon, PencilIcon } from './Icons';
@@ -12,14 +13,14 @@ interface EventListProps {
 
 const getIconForType = (type: EventType) => {
   switch (type) {
-    case EventType.FEED: return <FeedIcon className="w-5 h-5 text-rust" />;
-    case EventType.SLEEP: return <MoonIcon className="w-5 h-5 text-sage" />;
-    case EventType.DIAPER: return <DiaperIcon className="w-5 h-5 text-sand" />;
-    case EventType.SYMPTOM: return <HeartIcon className="w-5 h-5 text-rose-500" />;
-    case EventType.MOVEMENT: return <BoltIcon className="w-5 h-5 text-orange-500" />;
-    case EventType.MEASUREMENT: return <RulerIcon className="w-5 h-5 text-sky-500" />;
-    case EventType.NOTE: return <PencilIcon className="w-5 h-5 text-slate-500" />;
-    default: return <div className="w-5 h-5 text-charcoal" />;
+    case EventType.FEED: return <FeedIcon className="w-6 h-6 text-rust" />;
+    case EventType.SLEEP: return <MoonIcon className="w-6 h-6 text-sage" />;
+    case EventType.DIAPER: return <DiaperIcon className="w-6 h-6 text-sand" />;
+    case EventType.SYMPTOM: return <HeartIcon className="w-6 h-6 text-rose-500" />;
+    case EventType.MOVEMENT: return <BoltIcon className="w-6 h-6 text-orange-500" />;
+    case EventType.MEASUREMENT: return <RulerIcon className="w-6 h-6 text-sky-500" />;
+    case EventType.NOTE: return <PencilIcon className="w-6 h-6 text-slate-500" />;
+    default: return <div className="w-6 h-6 text-charcoal" />;
   }
 };
 
@@ -91,10 +92,10 @@ const EventList: React.FC<EventListProps> = ({ events, selectedDate, filterCateg
   if (dayEvents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-charcoal/40 bg-surface rounded-3xl border border-dashed border-subtle">
-        <p className="font-serif italic mb-1">
+        <p className="font-serif italic mb-1 text-lg">
           {filterCategory ? `No ${filterCategory} events` : "Quiet day"}
         </p>
-        <p className="text-sm">
+        <p className="text-base">
           {filterCategory ? "Try selecting a different category." : "No events recorded for this date."}
         </p>
       </div>
@@ -105,32 +106,32 @@ const EventList: React.FC<EventListProps> = ({ events, selectedDate, filterCateg
     <div className="space-y-4 pb-32">
       {dayEvents.map((event) => (
         <div key={event.id} onClick={() => onEditEvent(event)} className="relative group cursor-pointer">
-           <div className="group bg-surface p-4 rounded-2xl shadow-sm border border-transparent hover:border-rust/20 hover:shadow-md transition-all flex items-center gap-4 relative z-0">
+           <div className="group bg-surface p-5 rounded-2xl shadow-sm border border-transparent hover:border-rust/20 hover:shadow-md transition-all flex items-center gap-5 relative z-0">
             
             {/* Icon Box */}
-            <div className={`w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center ${getBgForType(event.type)}`}>
+            <div className={`w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center ${getBgForType(event.type)}`}>
               {getIconForType(event.type)}
             </div>
             
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-baseline mb-1">
-                <h3 className="font-bold text-charcoal capitalize truncate pr-2">{event.type}</h3>
-                <span className="text-xs font-bold text-charcoal/40 font-mono bg-subtle px-2 py-0.5 rounded-md">
+                <h3 className="text-lg font-bold text-charcoal capitalize truncate pr-2">{event.type}</h3>
+                <span className="text-sm font-bold text-charcoal/50 font-mono bg-subtle px-2 py-0.5 rounded-md">
                   {formatTime(event.startTime)}
                 </span>
               </div>
               
-              <p className="text-charcoal/70 text-sm truncate">{formatDetails(event) || 'Event logged'}</p>
+              <p className="text-charcoal/80 text-base truncate font-medium">{formatDetails(event) || 'Event logged'}</p>
               
               {event.notes && (
-                <p className="text-charcoal/50 text-xs mt-1 italic line-clamp-1">"{event.notes}"</p>
+                <p className="text-charcoal/60 text-sm mt-1 italic line-clamp-1">"{event.notes}"</p>
               )}
             </div>
             
             {/* Edit Indicator */}
-            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <PencilIcon className="w-4 h-4 text-charcoal/30" />
+            <div className="absolute top-5 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <PencilIcon className="w-5 h-5 text-charcoal/30" />
             </div>
           </div>
         </div>
