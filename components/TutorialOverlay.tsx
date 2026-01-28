@@ -56,15 +56,15 @@ const TutorialOverlay: React.FC<Props> = ({ onClose, userName }) => {
       position: 'top'
     },
     {
-      targetId: 'tutorial-text-input',
-      title: "Manual Control",
-      desc: "Prefer typing? Enter details here. \n\nDon't worry if you make a mistake—you can always review and edit the details before saving.",
+      targetId: 'tutorial-quick-actions',
+      title: "One-Tap Logging",
+      desc: "No need to type. Tap these buttons to instantly log a feed, sleep, or diaper change. You can adjust the time and details in the next step.",
       position: 'top'
     },
     {
       targetId: undefined, // Centered modal for general concept
       title: "You Are In Control",
-      desc: "After you speak or type, a Review Card will appear. You can adjust the time, add notes, or fix any details before confirming the entry.",
+      desc: "After you speak or tap, a Review Card will appear. You can adjust the time, add notes, or fix any details before confirming the entry.",
     }
   ];
 

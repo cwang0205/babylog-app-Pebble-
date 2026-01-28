@@ -14,9 +14,22 @@ import EventConfirmation from './components/EventConfirmation';
 import DayCalendarView from './components/DayCalendarView';
 import TutorialOverlay from './components/TutorialOverlay';
 import ShareBabyModal from './components/ShareBabyModal';
-import { PlusIcon, SendIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, UserPlusIcon, BoltIcon } from './components/Icons';
+import { PlusIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, UserPlusIcon, BoltIcon, FeedIcon, MoonIcon, DiaperIcon } from './components/Icons';
 
 type ViewMode = 'list' | 'calendar' | 'report';
+
+// Helper Component for Quick Action Buttons
+const QuickActionButton = ({ icon, label, onClick, colorClass }: { icon: React.ReactNode, label: string, onClick: () => void, colorClass: string }) => (
+  <button 
+    onClick={onClick}
+    className="flex flex-col items-center gap-1 group"
+  >
+    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm border border-black/5 transition-all transform active:scale-95 group-hover:-translate-y-1 ${colorClass}`}>
+      {icon}
+    </div>
+    <span className="text-[10px] font-bold text-charcoal/60 uppercase tracking-wide">{label}</span>
+  </button>
+);
 
 function App() {
   // Auth State
@@ -33,7 +46,6 @@ function App() {
   const [filterCategory, setFilterCategory] = useState<FilterCategory>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [textInput, setTextInput] = useState('');
   const [pendingEvent, setPendingEvent] = useState<ParseResult | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   
@@ -210,8 +222,20 @@ function App() {
       alert("We couldn't quite catch that. Please try again.");
     } finally {
       setIsProcessing(false);
-      setTextInput('');
     }
+  };
+
+  // NEW: Direct Manual Entry (No AI Cost)
+  const handleManualEntry = (type: EventType) => {
+    const now = new Date();
+    // Default structure for a new event
+    setPendingEvent({
+      type: type,
+      startTime: now.toISOString(),
+      details: {}, // Empty details, user will fill in form
+      notes: ''
+    });
+    setEditingEventId(null);
   };
 
   const handleEditEvent = (event: BabyEvent) => {
@@ -416,7 +440,15 @@ function App() {
 
   // MAIN APP
   return (
-    <div className="min-h-screen bg-cream flex flex-col relative">
+    <div 
+      className="min-h-screen bg-cream flex flex-col relative"
+      style={{
+        paddingTop: 'var(--sat, 0)', 
+        paddingBottom: 'var(--sab, 0)',
+        paddingLeft: 'var(--sal, 0)',
+        paddingRight: 'var(--sar, 0)'
+      }}
+    >
       
       {/* 1. Header & Hero */}
       <div className="bg-cream px-6 pt-8 pb-4 max-w-5xl mx-auto w-full">
@@ -616,6 +648,7 @@ function App() {
                 events={events} 
                 selectedDate={selectedDate}
                 filterCategory={filterCategory}
+                onEditEvent={handleEditEvent}
              />
            )}
            
@@ -626,37 +659,48 @@ function App() {
 
       </main>
 
-      {/* 3. Sticky Footer / Voice Input */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-cream via-cream to-transparent pointer-events-none z-20">
-        <div className="max-w-xl mx-auto flex flex-col items-center pointer-events-auto">
+      {/* 3. Sticky Footer / Quick Actions Dock */}
+      <div 
+         className="fixed bottom-0 left-0 right-0 px-4 pb-2 bg-gradient-to-t from-cream via-cream to-transparent z-20" 
+         style={{ paddingBottom: 'calc(0.5rem + var(--sab, 0))' }}
+      >
+        <div id="tutorial-quick-actions" className="max-w-xl mx-auto flex items-end justify-between gap-2 md:gap-4 px-2">
           
-          {/* Voice Button (Floating) */}
-          <div id="tutorial-voice-btn" className="mb-4">
+          <QuickActionButton 
+            label="Feed" 
+            icon={<FeedIcon className="w-6 h-6 text-rust" />} 
+            colorClass="bg-[#FDECE8]" 
+            onClick={() => handleManualEntry(EventType.FEED)}
+          />
+          
+          <QuickActionButton 
+            label="Sleep" 
+            icon={<MoonIcon className="w-6 h-6 text-sage" />} 
+            colorClass="bg-[#E6F4F1]" 
+            onClick={() => handleManualEntry(EventType.SLEEP)}
+          />
+
+          {/* Voice Button (Floating Center) */}
+          <div id="tutorial-voice-btn" className="-mb-2 z-10">
             <VoiceRecorder 
               onRecordingComplete={(blob) => processInput(undefined, blob)} 
               isProcessing={isProcessing} 
             />
           </div>
 
-          {/* Text Input (Pill) */}
-          <div id="tutorial-text-input" className="w-full bg-surface shadow-2xl shadow-charcoal/10 rounded-full p-2 pl-6 flex items-center gap-2 border border-subtle transition-all focus-within:ring-2 focus-within:ring-rust/20">
-            <input 
-              type="text" 
-              placeholder="Or type manual log (e.g. 'Jane ate 4oz')..."
-              className="flex-1 bg-transparent border-none text-charcoal placeholder-charcoal/40 text-sm focus:outline-none font-sans"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && textInput && processInput(textInput)}
-              disabled={isProcessing}
-            />
-            <button 
-              onClick={() => textInput && processInput(textInput)}
-              disabled={!textInput || isProcessing}
-              className="bg-charcoal text-white p-3 rounded-full hover:bg-rust transition-colors disabled:opacity-50"
-            >
-              <SendIcon className="w-5 h-5" />
-            </button>
-          </div>
+          <QuickActionButton 
+            label="Diaper" 
+            icon={<DiaperIcon className="w-6 h-6 text-sand" />} 
+            colorClass="bg-[#FFF8E1]" 
+            onClick={() => handleManualEntry(EventType.DIAPER)}
+          />
+
+          <QuickActionButton 
+            label="More" 
+            icon={<PlusIcon className="w-6 h-6 text-charcoal/60" />} 
+            colorClass="bg-white" 
+            onClick={() => handleManualEntry(EventType.NOTE)}
+          />
 
         </div>
       </div>

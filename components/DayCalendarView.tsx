@@ -8,6 +8,7 @@ interface Props {
   events: BabyEvent[];
   selectedDate: Date;
   filterCategory: FilterCategory;
+  onEditEvent: (event: BabyEvent) => void;
 }
 
 // Helper to determine styling based on event type
@@ -32,7 +33,7 @@ const getEventStyle = (type: EventType) => {
   }
 };
 
-const DayCalendarView: React.FC<Props> = ({ events, selectedDate, filterCategory }) => {
+const DayCalendarView: React.FC<Props> = ({ events, selectedDate, filterCategory, onEditEvent }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   
   // 1. Filter for the Selected Date AND Category
@@ -159,7 +160,8 @@ const DayCalendarView: React.FC<Props> = ({ events, selectedDate, filterCategory
             return (
               <div
                 key={event.id}
-                className={`absolute left-14 right-4 rounded-xl p-2 shadow-sm border border-white/20 flex flex-col justify-center ${styles.bg} ${styles.text} hover:opacity-90 transition-opacity z-10 overflow-hidden`}
+                onClick={() => onEditEvent(event)}
+                className={`absolute left-14 right-4 rounded-xl p-2 shadow-sm border border-white/20 flex flex-col justify-center cursor-pointer ${styles.bg} ${styles.text} hover:opacity-90 transition-opacity z-10 overflow-hidden`}
                 style={{
                   top: `${startMins * PIXELS_PER_MINUTE}px`,
                   height: `${Math.max(durationMins * PIXELS_PER_MINUTE, 40)}px`
