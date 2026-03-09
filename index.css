@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FDFBF7;
+  --color-rust: #E76F51;
+  --color-sage: #2A9D8F;
+  --color-sand: #E9C46A;
+  --color-charcoal: #264653;
+  --color-sky: #A8DADC;
+  --color-surface: #FFFFFF;
+  --color-subtle: #F4F1EA;
+  --animate-fade-in-up: fadeInUp 0.5s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}

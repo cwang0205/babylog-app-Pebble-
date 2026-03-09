@@ -4,35 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <title>BabyLog - Smart Baby Tracker</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              cream: '#FDFBF7',
-              rust: '#E76F51',
-              sage: '#2A9D8F',
-              sand: '#E9C46A',
-              charcoal: '#264653',
-              sky: '#A8DADC',
-              surface: '#FFFFFF',
-              subtle: '#F4F1EA'
-            },
-            animation: {
-              'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
-            },
-            keyframes: {
-              fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(10px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              }
-            }
-          }
-        }
-      }
-    </script>
     <style>
       /* Global Softness */
       body {
@@ -65,26 +36,9 @@
       .stagger-2 { animation-delay: 200ms; }
       .stagger-3 { animation-delay: 300ms; }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/jsx-runtime": "https://esm.sh/react@^19.2.3/jsx-runtime",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "firebase/app": "https://esm.sh/firebase@^12.8.0/app",
-    "firebase/auth": "https://esm.sh/firebase@^12.8.0/auth",
-    "firebase/firestore": "https://esm.sh/firebase@^12.8.0/firestore",
-    "firebase/firestore/lite": "https://esm.sh/firebase@^12.8.0/firestore/lite",
-    "firebase/": "https://esm.sh/firebase@^12.8.0/"
-  }
-}
-</script>
-</head>
+  </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>

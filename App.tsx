@@ -4,7 +4,6 @@ import { User } from 'firebase/auth';
 import { AuthService } from './services/authService';
 import { StorageService } from './services/storageService';
 import { GeminiService } from './services/geminiService';
-import { DataSeeder } from './services/dataSeeder'; // Import Seeder
 import { BabyEvent, BabyProfile, Gender, ParseResult, EventType } from './types';
 import VoiceRecorder from './components/VoiceRecorder';
 import EventList from './components/EventList';
@@ -14,7 +13,8 @@ import EventConfirmation from './components/EventConfirmation';
 import DayCalendarView from './components/DayCalendarView';
 import TutorialOverlay from './components/TutorialOverlay';
 import ShareBabyModal from './components/ShareBabyModal';
-import { PlusIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, UserPlusIcon, BoltIcon, FeedIcon, MoonIcon, DiaperIcon } from './components/Icons';
+import { PlusIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, UserPlusIcon, FeedIcon, MoonIcon, DiaperIcon, SparklesIcon } from './components/Icons';
+import { generateSeedData } from './utils/seedData';
 
 type ViewMode = 'list' | 'calendar' | 'report';
 
@@ -173,24 +173,6 @@ function App() {
     setSelectedDate(newDate);
   };
 
-  // DEBUG TOOL: SEED DATA
-  const handleSeedData = async () => {
-    if (!currentBaby || !user || !user.email) return;
-    if (!window.confirm("⚠️ Developer Tool\n\nThis will add ~2 weeks of fake data (feeds, sleep, diapers) to this profile. Continue?")) return;
-
-    setIsProcessing(true);
-    try {
-      await DataSeeder.seedEvents(currentBaby.id, user.email);
-      alert("Success! 2 weeks of data added. Refreshing...");
-      loadEvents(currentBaby.id);
-    } catch (e) {
-      console.error(e);
-      alert("Failed to seed data. Check console.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const processInput = async (text?: string, audioBlob?: Blob) => {
     setIsProcessing(true);
     try {
@@ -282,16 +264,14 @@ function App() {
   const handleDeleteEvent = async () => {
     if (!editingEventId || !currentBaby) return;
     
-    if (window.confirm("Are you sure you want to delete this event? This cannot be undone.")) {
-      try {
-        await StorageService.deleteEvent(editingEventId);
-        setPendingEvent(null);
-        setEditingEventId(null);
-        loadEvents(currentBaby.id);
-      } catch (e) {
-        console.error("Failed to delete event", e);
-        alert("Failed to delete event.");
-      }
+    try {
+      await StorageService.deleteEvent(editingEventId);
+      setPendingEvent(null);
+      setEditingEventId(null);
+      loadEvents(currentBaby.id);
+    } catch (e) {
+      console.error("Failed to delete event", e);
+      alert("Failed to delete event.");
     }
   };
 
@@ -327,6 +307,23 @@ function App() {
       alert("Sign in failed. Check console for details.");
     } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  const handleSeedData = async () => {
+    if (!currentBaby || !user || !user.email) return;
+    if (window.confirm("Generate 2 weeks of sample data? This will take a few seconds.")) {
+      setIsProcessing(true);
+      try {
+        const count = await generateSeedData(currentBaby.id, user.email);
+        alert(`Successfully added ${count} sample events!`);
+        loadEvents(currentBaby.id);
+      } catch (error) {
+        console.error("Failed to generate seed data", error);
+        alert("Failed to generate sample data.");
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -460,18 +457,6 @@ function App() {
           
           {/* Profile Switcher & Logout */}
           <div className="flex items-center gap-3">
-             {/* Dev Seed Button */}
-             {currentBaby && (
-               <button 
-                  onClick={handleSeedData}
-                  className="hidden md:flex items-center gap-1 bg-charcoal/5 text-charcoal/50 hover:bg-charcoal/10 hover:text-charcoal px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
-                  title="Generate Test Data"
-               >
-                 <BoltIcon className="w-3 h-3" />
-                 Seed Data
-               </button>
-             )}
-
              {/* Help Button */}
              <button 
                 onClick={() => setShowTutorial(true)}
@@ -538,6 +523,18 @@ function App() {
                  >
                    <UserPlusIcon className="w-3 h-3" />
                    <span>Share</span>
+                 </button>
+               )}
+
+               {/* Seed Data Button */}
+               {currentBaby && (
+                 <button 
+                   onClick={handleSeedData}
+                   disabled={isProcessing}
+                   className="flex items-center gap-1 bg-rust/10 text-rust hover:bg-rust/20 px-2 py-0.5 rounded-full text-xs font-bold transition-colors mr-1 disabled:opacity-50"
+                 >
+                   <SparklesIcon className="w-3 h-3" />
+                   <span>Seed Data</span>
                  </button>
                )}
                

@@ -13,6 +13,7 @@ interface Props {
 
 const EventConfirmation: React.FC<Props> = ({ data, mode = 'create', onConfirm, onCancel, onDelete }) => {
   const [editedData, setEditedData] = useState<ParseResult>(data);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleChange = (field: keyof ParseResult, value: any) => {
     setEditedData(prev => ({ ...prev, [field]: value }));
@@ -70,9 +71,9 @@ const EventConfirmation: React.FC<Props> = ({ data, mode = 'create', onConfirm, 
               {mode === 'edit' ? 'Make changes below' : 'Is this what you wanted to log?'}
             </p>
           </div>
-          {mode === 'edit' && onDelete && (
+          {mode === 'edit' && onDelete && !showDeleteConfirm && (
             <button 
-              onClick={onDelete}
+              onClick={() => setShowDeleteConfirm(true)}
               className="absolute top-6 right-6 p-2 bg-red-50 text-red-500 rounded-full hover:bg-red-100 transition-colors"
               title="Delete Event"
             >
@@ -81,9 +82,33 @@ const EventConfirmation: React.FC<Props> = ({ data, mode = 'create', onConfirm, 
           )}
         </div>
 
-        <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto no-scrollbar">
-          
-          {/* Type Selector */}
+        {showDeleteConfirm ? (
+          <div className="p-6 text-center space-y-4">
+            <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <TrashIcon className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold text-charcoal">Delete this event?</h3>
+            <p className="text-charcoal/60">This action cannot be undone.</p>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 text-base font-bold text-charcoal bg-subtle rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onDelete}
+                className="flex-1 py-3 text-base font-bold text-white bg-red-500 rounded-xl shadow-lg shadow-red-500/30 hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto no-scrollbar">
+              
+              {/* Type Selector */}
           <div>
             <label className="block text-xs font-bold text-charcoal/50 uppercase mb-1">Activity</label>
             <select
@@ -271,6 +296,19 @@ const EventConfirmation: React.FC<Props> = ({ data, mode = 'create', onConfirm, 
                  </div>
                </div>
             )}
+
+            {(editedData.type === EventType.SYMPTOM || editedData.type === EventType.MOVEMENT || editedData.type === EventType.NOTE) && (
+               <div>
+                  <label className="text-[10px] text-charcoal/50 font-bold uppercase">Description</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g., small cough after meal"
+                    className="w-full bg-white p-3 rounded-xl border border-subtle mt-1 text-base"
+                    value={editedData.details?.description || ''}
+                    onChange={(e) => handleDetailsChange('description', e.target.value)}
+                  />
+               </div>
+            )}
             
             <div className="mt-4">
                <label className="text-[10px] text-charcoal/50 font-bold uppercase">Note</label>
@@ -299,6 +337,8 @@ const EventConfirmation: React.FC<Props> = ({ data, mode = 'create', onConfirm, 
             {mode === 'edit' ? 'Update' : 'Save It'}
           </button>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
