@@ -46,8 +46,6 @@ const ShareBabyModal: React.FC<Props> = ({ baby, onClose, currentUserEmail, curr
   };
 
   const handleRemove = async (email: string) => {
-    if (!window.confirm(`Remove access for ${email}?`)) return;
-    
     setLoading(true);
     try {
       await StorageService.unshareBaby(baby.id, email);

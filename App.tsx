@@ -80,7 +80,7 @@ function App() {
       setCurrentBaby(null);
       setEvents([]);
     }
-  }, [user]);
+  }, [user?.uid, user?.email]);
 
   // 3. Load Events when Baby Selected
   useEffect(() => {
@@ -97,24 +97,33 @@ function App() {
   };
 
   const loadBabies = async (email: string) => {
-    const loadedBabies = await StorageService.getBabies(email);
-    setBabies(loadedBabies);
-    
-    if (loadedBabies.length > 0) {
-      setCurrentBaby(loadedBabies[0]);
-      // If user has babies, check tutorial
-      const key = `babylog:tutorial_seen:${user!.uid}`;
-      if (!localStorage.getItem(key)) {
-        setShowTutorial(true);
+    try {
+      const loadedBabies = await StorageService.getBabies(email);
+      setBabies(loadedBabies);
+      
+      if (loadedBabies.length > 0) {
+        setCurrentBaby(loadedBabies[0]);
+        // If user has babies, check tutorial
+        const key = `babylog:tutorial_seen:${user!.uid}`;
+        if (!localStorage.getItem(key)) {
+          setShowTutorial(true);
+        }
+      } else {
+        setShowAddBaby(true);
       }
-    } else {
-      setShowAddBaby(true);
+    } catch (error) {
+      console.error("Failed to load babies", error);
+      // Do not reset state or show add baby screen if it was just a network error
     }
   };
 
   const loadEvents = async (babyId: string) => {
-    const babyEvents = await StorageService.getEvents(babyId);
-    setEvents(babyEvents);
+    try {
+      const babyEvents = await StorageService.getEvents(babyId);
+      setEvents(babyEvents);
+    } catch (error) {
+      console.error("Failed to load events", error);
+    }
   };
 
   const handleAddBaby = async () => {
@@ -312,18 +321,14 @@ function App() {
 
   const handleSeedData = async () => {
     if (!currentBaby || !user || !user.email) return;
-    if (window.confirm("Generate 2 weeks of sample data? This will take a few seconds.")) {
-      setIsProcessing(true);
-      try {
-        const count = await generateSeedData(currentBaby.id, user.email);
-        alert(`Successfully added ${count} sample events!`);
-        loadEvents(currentBaby.id);
-      } catch (error) {
-        console.error("Failed to generate seed data", error);
-        alert("Failed to generate sample data.");
-      } finally {
-        setIsProcessing(false);
-      }
+    setIsProcessing(true);
+    try {
+      await generateSeedData(currentBaby.id, user.email);
+      loadEvents(currentBaby.id);
+    } catch (error) {
+      console.error("Failed to generate seed data", error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -393,11 +398,24 @@ function App() {
   // ONBOARDING SCREEN
   if (showAddBaby) {
     return (
-      <div className="min-h-screen bg-cream flex flex-col justify-center items-center px-6 animate-fade-in-up">
+      <div className="min-h-screen bg-cream flex flex-col justify-center items-center px-6 animate-fade-in-up relative">
+        {/* Cancel Button if user already has babies */}
+        {babies.length > 0 && (
+          <button 
+            onClick={() => setShowAddBaby(false)}
+            className="absolute top-6 left-6 text-charcoal/50 hover:text-charcoal font-bold text-sm flex items-center gap-1 transition-colors"
+          >
+            ← Back
+          </button>
+        )}
         <div className="w-full max-w-md bg-surface p-8 rounded-3xl shadow-xl border border-subtle text-center">
           <div className="w-16 h-16 bg-sage/20 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">👶</div>
-          <h1 className="text-3xl font-bold text-charcoal mb-2">Welcome!</h1>
-          <p className="text-charcoal/70 mb-8 font-sans">Let's create a profile for your little one.</p>
+          <h1 className="text-3xl font-bold text-charcoal mb-2">
+            {babies.length > 0 ? 'Add Another Baby' : 'Welcome!'}
+          </h1>
+          <p className="text-charcoal/70 mb-8 font-sans">
+            {babies.length > 0 ? "Let's create a profile for your other little one." : "Let's create a profile for your little one."}
+          </p>
           
           <div className="text-left mb-6 space-y-4">
             <div>

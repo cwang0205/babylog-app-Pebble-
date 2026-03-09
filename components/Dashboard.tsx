@@ -263,9 +263,9 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
         </div>
       </RichStatCard>
 
-      {/* Wellness & Notes Card */}
+      {/* Growth Notes Card */}
       <RichStatCard 
-        label={stats.wellness.isAlert ? "Health Alert" : "Wellness"} 
+        label="Growth Notes"
         icon={stats.wellness.isAlert ? <HeartIcon className="w-6 h-6" /> : <PencilIcon className="w-6 h-6" />} 
         colorClass={stats.wellness.isAlert ? "text-rose-600" : "text-slate-600"}
         bgClass={stats.wellness.isAlert ? "bg-rose-50" : "bg-slate-100"}
@@ -277,7 +277,7 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
           <span className="text-base ml-2 opacity-70 font-bold">Logs</span>
         </div>
         <div className="mt-2 text-xs opacity-60 font-bold line-clamp-1">
-          {stats.wellness.isAlert ? 'Monitor symptoms' : 'Measurements & Notes'}
+          {stats.wellness.isAlert ? 'Symptom recorded' : 'Health, Growth & Notes'}
         </div>
       </RichStatCard>
     </div>

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ParseResult, EventType } from '../types';
-import { TrashIcon } from './Icons';
+import { TrashIcon, XIcon } from './Icons';
 
 interface Props {
   data: ParseResult;
@@ -128,25 +128,47 @@ const EventConfirmation: React.FC<Props> = ({ data, mode = 'create', onConfirm, 
                 <label className="block text-xs font-bold text-charcoal/50 uppercase mb-1">
                   {editedData.type === EventType.SLEEP ? 'Start Time' : 'Time'}
                 </label>
-                <input
-                  type="datetime-local"
-                  value={toLocalInputString(editedData.startTime)}
-                  onChange={(e) => handleDateChange('startTime', e.target.value)}
-                  className="w-full bg-subtle text-charcoal font-sans rounded-xl p-4 border-none focus:ring-2 focus:ring-rust/50 text-base"
-                />
+                <div className="relative">
+                  <input
+                    type="datetime-local"
+                    value={toLocalInputString(editedData.startTime)}
+                    onChange={(e) => handleDateChange('startTime', e.target.value)}
+                    className="w-full bg-subtle text-charcoal font-sans rounded-xl p-4 pr-12 border-none focus:ring-2 focus:ring-rust/50 text-base"
+                  />
+                  {editedData.startTime && (
+                    <button
+                      onClick={() => handleChange('startTime', null)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-charcoal/40 hover:text-charcoal/80 transition-colors bg-subtle rounded-full"
+                      title="Clear time"
+                    >
+                      <XIcon className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
              </div>
              
              {/* Show End Time only for Sleep */}
              {editedData.type === EventType.SLEEP && (
                <div>
                   <label className="block text-xs font-bold text-charcoal/50 uppercase mb-1">End Time</label>
-                  <input
-                    type="datetime-local"
-                    value={toLocalInputString(editedData.endTime)}
-                    onChange={(e) => handleDateChange('endTime', e.target.value)}
-                    className="w-full bg-subtle text-charcoal font-sans rounded-xl p-4 border-none focus:ring-2 focus:ring-rust/50 text-base"
-                  />
-                  {/* Clear Button for End Time */}
+                  <div className="relative">
+                    <input
+                      type="datetime-local"
+                      value={toLocalInputString(editedData.endTime)}
+                      onChange={(e) => handleDateChange('endTime', e.target.value)}
+                      className="w-full bg-subtle text-charcoal font-sans rounded-xl p-4 pr-12 border-none focus:ring-2 focus:ring-rust/50 text-base"
+                    />
+                    {editedData.endTime && (
+                      <button
+                        onClick={() => handleChange('endTime', null)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-charcoal/40 hover:text-charcoal/80 transition-colors bg-subtle rounded-full"
+                        title="Clear time"
+                      >
+                        <XIcon className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                  {/* Clear Button for End Time (Text version as fallback/extra clarity) */}
                   {editedData.endTime && (
                     <button 
                       onClick={() => handleChange('endTime', null)} 

@@ -42,7 +42,7 @@ export const StorageService = {
       return babies;
     } catch (e) {
       console.error("Error fetching babies from Firestore:", e);
-      return [];
+      throw e;
     }
   },
 
@@ -119,7 +119,7 @@ export const StorageService = {
       return events.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
     } catch (e) {
       console.error("Error fetching events from Firestore:", e);
-      return [];
+      throw e;
     }
   },
 
