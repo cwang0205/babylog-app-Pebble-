@@ -13,6 +13,7 @@ import EventConfirmation from './components/EventConfirmation';
 import DayCalendarView from './components/DayCalendarView';
 import TutorialOverlay from './components/TutorialOverlay';
 import ShareBabyModal from './components/ShareBabyModal';
+import MilestoneView from './components/MilestoneView';
 import { PlusIcon, CalendarIcon, ListBulletIcon, ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, UserPlusIcon, FeedIcon, MoonIcon, DiaperIcon, SparklesIcon } from './components/Icons';
 import { generateSeedData } from './utils/seedData';
 
@@ -60,6 +61,9 @@ function App() {
   
   // Share Modal State
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // Milestones State
+  const [showMilestones, setShowMilestones] = useState(false);
 
   // 1. Auth Listener
   useEffect(() => {
@@ -674,6 +678,18 @@ function App() {
 
       </main>
 
+      {/* Floating Milestone Button */}
+      {currentBaby && (
+        <button
+          onClick={() => setShowMilestones(true)}
+          className="fixed bottom-32 right-6 z-40 bg-white border border-sage/30 shadow-lg p-3 rounded-full flex items-center gap-2 hover:bg-sage/10 transition-colors animate-bounce-slow"
+          title="View Milestones"
+        >
+          <span className="text-2xl">👶</span>
+          <span className="text-sm font-bold text-charcoal pr-2 hidden md:inline">Milestones</span>
+        </button>
+      )}
+
       {/* 3. Sticky Footer / Quick Actions Dock */}
       <div 
          className="fixed bottom-0 left-0 right-0 px-4 pb-2 bg-gradient-to-t from-cream via-cream to-transparent z-20" 
@@ -721,6 +737,13 @@ function App() {
       </div>
 
       {/* Modals */}
+      {showMilestones && currentBaby && (
+        <MilestoneView
+          baby={currentBaby}
+          onClose={() => setShowMilestones(false)}
+        />
+      )}
+
       {showTutorial && (
         <TutorialOverlay 
           onClose={closeTutorial} 

@@ -71,6 +71,21 @@ export const StorageService = {
   },
 
   /**
+   * Updates the checked milestones for a baby.
+   */
+  updateBabyMilestones: async (babyId: string, milestones: Record<string, boolean>): Promise<void> => {
+    try {
+      const babyRef = doc(db, BABIES_COLLECTION, babyId);
+      await updateDoc(babyRef, {
+        milestones
+      });
+    } catch (e) {
+      console.error("Error updating milestones:", e);
+      throw e;
+    }
+  },
+
+  /**
    * Shares a baby profile with another user by email.
    */
   shareBaby: async (babyId: string, emailToInvite: string): Promise<void> => {

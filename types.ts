@@ -22,6 +22,7 @@ export interface BabyProfile {
   weight?: number; // in kg
   ownerId: string; // The creator's UID
   allowedEmails: string[]; // List of emails that can access this profile
+  milestones?: Record<string, boolean>; // Checked milestones
 }
 
 export interface BabyEvent {
