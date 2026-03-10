@@ -42,8 +42,40 @@ function App() {
   const [babies, setBabies] = useState<BabyProfile[]>([]);
   const [currentBaby, setCurrentBaby] = useState<BabyProfile | null>(null);
   const [events, setEvents] = useState<BabyEvent[]>([]);
+  const [healthEvents, setHealthEvents] = useState<BabyEvent[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  
+  // Date range for fetching events (default to last 14 days)
+  const [dateRange, setDateRange] = useState(() => {
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const start = new Date();
+    start.setDate(start.getDate() - 14);
+    start.setHours(0, 0, 0, 0);
+    return { start, end };
+  });
+
+  // Adjust date range if selectedDate falls outside of it
+  useEffect(() => {
+    if (selectedDate < dateRange.start || selectedDate > dateRange.end) {
+      const newStart = new Date(Math.min(selectedDate.getTime(), dateRange.start.getTime()));
+      const newEnd = new Date(Math.max(selectedDate.getTime(), dateRange.end.getTime()));
+
+      if (selectedDate < dateRange.start) {
+        newStart.setDate(newStart.getDate() - 7);
+        newStart.setHours(0, 0, 0, 0);
+      }
+      
+      if (selectedDate > dateRange.end) {
+        newEnd.setDate(newEnd.getDate() + 7);
+        newEnd.setHours(23, 59, 59, 999);
+      }
+      
+      setDateRange({ start: newStart, end: newEnd });
+    }
+  }, [selectedDate, dateRange.start, dateRange.end]);
+
   const [filterCategory, setFilterCategory] = useState<FilterCategory>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
@@ -77,8 +109,39 @@ function App() {
   // 2. Load Babies when User Logs In
   useEffect(() => {
     if (user && user.email) {
-      loadBabies(user.email);
+      const unsubscribe = StorageService.subscribeToBabies(
+        user.email,
+        (loadedBabies) => {
+          setBabies(loadedBabies);
+          
+          if (loadedBabies.length > 0) {
+            // Update current baby if it exists to get latest data, otherwise pick first
+            setCurrentBaby(prev => {
+              if (prev) {
+                const updated = loadedBabies.find(b => b.id === prev.id);
+                return updated || loadedBabies[0];
+              }
+              return loadedBabies[0];
+            });
+
+            // If user has babies, check tutorial
+            const key = `babylog:tutorial_seen:${user.uid}`;
+            if (!localStorage.getItem(key)) {
+              setShowTutorial(true);
+            }
+            setShowAddBaby(false);
+          } else {
+            setShowAddBaby(true);
+            setCurrentBaby(null);
+          }
+        },
+        (error) => {
+          console.error("Failed to load babies", error);
+        }
+      );
+      
       checkTutorialStatus(user.uid);
+      return () => unsubscribe();
     } else {
       setBabies([]);
       setCurrentBaby(null);
@@ -86,48 +149,79 @@ function App() {
     }
   }, [user?.uid, user?.email]);
 
-  // 3. Load Events when Baby Selected
+  // 3. Load Events when Baby Selected or Date Range Changes
   useEffect(() => {
     if (currentBaby) {
-      loadEvents(currentBaby.id);
+      const unsubscribeEvents = StorageService.subscribeToEvents(
+        currentBaby.id,
+        dateRange.start,
+        dateRange.end,
+        (babyEvents) => {
+          setEvents(babyEvents);
+        },
+        (error) => {
+          console.error("Failed to load events", error);
+          if (error.message.includes('failed-precondition') || error.message.includes('index')) {
+            if (error.message.includes('currently building')) {
+              alert("The database index is currently building. This usually takes 3-5 minutes. Please wait a moment and refresh the page.");
+            } else {
+              const urlMatch = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+              if (urlMatch) {
+                alert(`Firestore requires a composite index to filter events by date. Please click the link in the console or visit: ${urlMatch[0]}`);
+              } else {
+                alert("Firestore requires a composite index to filter events by date. Please check the browser console for the creation link.");
+              }
+            }
+          }
+        }
+      );
+
       setFilterCategory(null);
+      return () => {
+        unsubscribeEvents();
+      };
+    } else {
+      setEvents([]);
     }
-  }, [currentBaby]);
+  }, [currentBaby?.id, dateRange.start.getTime(), dateRange.end.getTime()]); // Re-subscribe if baby or date range changes
+
+  // 4. Load Health Events (30 days from TODAY) - Only re-runs if baby changes
+  useEffect(() => {
+    if (currentBaby) {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+      const unsubscribeHealth = StorageService.subscribeToHealthEvents(
+        currentBaby.id,
+        thirtyDaysAgo,
+        (hEvents) => {
+          setHealthEvents(hEvents);
+        },
+        (error) => {
+          console.error("Failed to load health events", error);
+          if (error.message.includes('failed-precondition') || error.message.includes('index')) {
+            const urlMatch = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+            if (urlMatch) {
+              console.log(`Health Log index needed: ${urlMatch[0]}`);
+              // We don't alert here to avoid double alerts, but we log it.
+            }
+          }
+        }
+      );
+
+      return () => {
+        unsubscribeHealth();
+      };
+    } else {
+      setHealthEvents([]);
+    }
+  }, [currentBaby?.id]); // Only re-subscribe if the active baby changes
 
   const checkTutorialStatus = (userId: string) => {
     const key = `babylog:tutorial_seen:${userId}`;
     const hasSeen = localStorage.getItem(key);
     // Logic handled in loadBabies usually, but kept here for reference
-  };
-
-  const loadBabies = async (email: string) => {
-    try {
-      const loadedBabies = await StorageService.getBabies(email);
-      setBabies(loadedBabies);
-      
-      if (loadedBabies.length > 0) {
-        setCurrentBaby(loadedBabies[0]);
-        // If user has babies, check tutorial
-        const key = `babylog:tutorial_seen:${user!.uid}`;
-        if (!localStorage.getItem(key)) {
-          setShowTutorial(true);
-        }
-      } else {
-        setShowAddBaby(true);
-      }
-    } catch (error) {
-      console.error("Failed to load babies", error);
-      // Do not reset state or show add baby screen if it was just a network error
-    }
-  };
-
-  const loadEvents = async (babyId: string) => {
-    try {
-      const babyEvents = await StorageService.getEvents(babyId);
-      setEvents(babyEvents);
-    } catch (error) {
-      console.error("Failed to load events", error);
-    }
   };
 
   const handleAddBaby = async () => {
@@ -270,8 +364,7 @@ function App() {
     
     setPendingEvent(null);
     setEditingEventId(null);
-    // Refresh events from cloud
-    loadEvents(currentBaby.id);
+    // Real-time listener will update the events list automatically
   };
 
   const handleDeleteEvent = async () => {
@@ -281,7 +374,7 @@ function App() {
       await StorageService.deleteEvent(editingEventId);
       setPendingEvent(null);
       setEditingEventId(null);
-      loadEvents(currentBaby.id);
+      // Real-time listener will update the events list automatically
     } catch (e) {
       console.error("Failed to delete event", e);
       alert("Failed to delete event.");
@@ -328,7 +421,7 @@ function App() {
     setIsProcessing(true);
     try {
       await generateSeedData(currentBaby.id, user.email);
-      loadEvents(currentBaby.id);
+      // Real-time listener will update the events list automatically
     } catch (error) {
       console.error("Failed to generate seed data", error);
     } finally {
@@ -404,12 +497,19 @@ function App() {
     return (
       <div className="min-h-screen bg-cream flex flex-col justify-center items-center px-6 animate-fade-in-up relative">
         {/* Cancel Button if user already has babies */}
-        {babies.length > 0 && (
+        {babies.length > 0 ? (
           <button 
             onClick={() => setShowAddBaby(false)}
             className="absolute top-6 left-6 text-charcoal/50 hover:text-charcoal font-bold text-sm flex items-center gap-1 transition-colors"
           >
             ← Back
+          </button>
+        ) : (
+          <button 
+            onClick={() => AuthService.signOut()}
+            className="absolute top-6 right-6 text-charcoal/50 hover:text-rust font-bold text-sm flex items-center gap-1 transition-colors underline"
+          >
+            Logout
           </button>
         )}
         <div className="w-full max-w-md bg-surface p-8 rounded-3xl shadow-xl border border-subtle text-center">
@@ -585,11 +685,34 @@ function App() {
              <button onClick={() => handleDateChange(-1)} className="p-2 hover:bg-subtle rounded-lg text-charcoal/60">
                 <ChevronLeftIcon className="w-5 h-5" />
              </button>
-             <div className="px-4 py-2 min-w-[140px] text-center">
+             <div className="px-4 py-2 min-w-[140px] text-center relative">
                 <span className="block text-xs font-bold uppercase text-charcoal/40 tracking-wider">Viewing</span>
-                <span className="block font-bold text-charcoal">
+                <label className="flex items-center justify-center gap-1.5 font-bold text-charcoal cursor-pointer hover:text-rust transition-colors relative">
                   {selectedDate.toDateString() === new Date().toDateString() ? 'Today' : selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                </span>
+                  <CalendarIcon className="w-4 h-4 text-charcoal/40" />
+                  <input 
+                    type="date" 
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    value={selectedDate.toISOString().split('T')[0]}
+                    min={currentBaby ? new Date(currentBaby.birthDate).toISOString().split('T')[0] : undefined}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const [year, month, day] = e.target.value.split('-');
+                        setSelectedDate(new Date(Number(year), Number(month) - 1, Number(day)));
+                      }
+                    }}
+                    onClick={(e) => {
+                      try {
+                        if ('showPicker' in HTMLInputElement.prototype) {
+                          (e.target as HTMLInputElement).showPicker();
+                        }
+                      } catch (err) {
+                        // ignore
+                      }
+                    }}
+                  />
+                </label>
              </div>
              <button onClick={() => handleDateChange(1)} className="p-2 hover:bg-subtle rounded-lg text-charcoal/60">
                 <ChevronRightIcon className="w-5 h-5" />
@@ -672,7 +795,7 @@ function App() {
            )}
            
            {viewMode === 'report' && (
-             <ConsolidatedReport events={events} selectedDate={selectedDate} />
+             <ConsolidatedReport events={events} healthEvents={healthEvents} selectedDate={selectedDate} />
            )}
         </div>
 
@@ -756,8 +879,7 @@ function App() {
           baby={currentBaby}
           onClose={() => {
             setShowShareModal(false);
-            // Refresh babies list to show any changes in allowed emails if they removed themselves (rare edge case)
-            if (user && user.email) loadBabies(user.email);
+            // Real-time listener will automatically pick up changes
           }}
           currentUserEmail={user.email}
           currentUserId={user.uid}

@@ -10,9 +10,10 @@ import {
   getDocs, 
   deleteDoc,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  onSnapshot
 } from 'firebase/firestore';
-import { BabyProfile, BabyEvent } from '../types';
+import { BabyProfile, BabyEvent, EventType } from '../types';
 
 // COLLECTION NAMES
 const BABIES_COLLECTION = 'babies';
@@ -21,6 +22,25 @@ const EVENTS_COLLECTION = 'events';
 export const StorageService = {
   
   // --- BABY PROFILES (CLOUD + SHARING) ---
+
+  /**
+   * Subscribes to all babies where the current user's email is in the 'allowedEmails' list.
+   */
+  subscribeToBabies: (userEmail: string, onUpdate: (babies: BabyProfile[]) => void, onError: (error: Error) => void) => {
+    const babiesRef = collection(db, BABIES_COLLECTION);
+    const q = query(babiesRef, where("allowedEmails", "array-contains", userEmail));
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const babies: BabyProfile[] = [];
+      querySnapshot.forEach((doc) => {
+        babies.push({ id: doc.id, ...doc.data() } as BabyProfile);
+      });
+      onUpdate(babies);
+    }, (error) => {
+      console.error("Error subscribing to babies:", error);
+      onError(error);
+    });
+  },
 
   /**
    * Fetches all babies where the current user's email is in the 'allowedEmails' list.
@@ -116,6 +136,61 @@ export const StorageService = {
   },
 
   // --- EVENTS (CLOUD) ---
+
+  subscribeToEvents: (
+    babyId: string, 
+    startDate: Date,
+    endDate: Date,
+    onUpdate: (events: BabyEvent[]) => void, 
+    onError: (error: Error) => void
+  ) => {
+    const eventsRef = collection(db, EVENTS_COLLECTION);
+    const q = query(
+      eventsRef, 
+      where("babyId", "==", babyId),
+      where("startTime", ">=", startDate.toISOString()),
+      where("startTime", "<=", endDate.toISOString())
+    );
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const events: BabyEvent[] = [];
+      querySnapshot.forEach((doc) => {
+        events.push({ id: doc.id, ...doc.data() } as BabyEvent);
+      });
+      // Sort in memory
+      onUpdate(events.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
+    }, (error) => {
+      console.error("Error subscribing to events:", error);
+      onError(error);
+    });
+  },
+
+  subscribeToHealthEvents: (
+    babyId: string,
+    startDate: Date,
+    onUpdate: (events: BabyEvent[]) => void,
+    onError: (error: Error) => void
+  ) => {
+    const eventsRef = collection(db, EVENTS_COLLECTION);
+    const q = query(
+      eventsRef,
+      where("babyId", "==", babyId),
+      where("type", "in", [EventType.SYMPTOM, EventType.MEASUREMENT]),
+      where("startTime", ">=", startDate.toISOString())
+    );
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const events: BabyEvent[] = [];
+      querySnapshot.forEach((doc) => {
+        events.push({ id: doc.id, ...doc.data() } as BabyEvent);
+      });
+      // Sort in memory
+      onUpdate(events.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()));
+    }, (error) => {
+      console.error("Error subscribing to health events:", error);
+      onError(error);
+    });
+  },
 
   getEvents: async (babyId: string): Promise<BabyEvent[]> => {
     try {

@@ -4,6 +4,7 @@ import { BabyEvent, EventType } from '../types';
 
 interface ReportProps {
   events: BabyEvent[];
+  healthEvents?: BabyEvent[];
   selectedDate: Date;
 }
 
@@ -13,21 +14,30 @@ const formatDuration = (minutes: number) => {
   return `${h}h ${m}m`;
 };
 
-const ConsolidatedReport: React.FC<ReportProps> = ({ events, selectedDate }) => {
+const ConsolidatedReport: React.FC<ReportProps> = ({ events, healthEvents = [], selectedDate }) => {
   const reportData = useMemo(() => {
     // 1. Setup Time Ranges
     const today = new Date(selectedDate);
     today.setHours(0,0,0,0);
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
     
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
+    const yesterdayEnd = new Date(yesterday);
+    yesterdayEnd.setHours(23, 59, 59, 999);
 
+    // 7-day average EXCLUDING today (so yesterday and the 6 days before it)
     const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - 6); // 7 days including today
+    weekStart.setDate(today.getDate() - 7);
     
-    // For Health Log: 30 days ago
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() - 1);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    // For Health Log: 14 days ago
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
     // 2. Metrics Containers
     const initialMetric = { 
@@ -52,17 +62,28 @@ const ConsolidatedReport: React.FC<ReportProps> = ({ events, selectedDate }) => 
     // Events are typically sorted desc (newest first) from props
     const sorted = [...events].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
     
+    const getOverlapMinutes = (startMs: number, endMs: number, dayStartMs: number, dayEndMs: number) => {
+      const overlapStart = Math.max(startMs, dayStartMs);
+      const overlapEnd = Math.min(endMs, dayEndMs);
+      if (overlapStart < overlapEnd) {
+        return Math.round((overlapEnd - overlapStart) / 60000);
+      }
+      return 0;
+    };
+
     sorted.forEach(e => {
+      const eStart = new Date(e.startTime).getTime();
+      const eEnd = e.endTime ? new Date(e.endTime).getTime() : eStart;
+      
       const eDate = new Date(e.startTime);
       eDate.setHours(0,0,0,0);
-      const isToday = eDate.getTime() === today.getTime();
-      const isYesterday = eDate.getTime() === yesterday.getTime();
-      const isThisWeek = eDate.getTime() >= weekStart.getTime() && eDate.getTime() <= today.getTime();
-      const isLast30Days = new Date(e.startTime).getTime() >= thirtyDaysAgo.getTime();
+      const isTodayStart = eDate.getTime() === today.getTime();
+      const isYesterdayStart = eDate.getTime() === yesterday.getTime();
+      const isThisWeekStart = eDate.getTime() >= weekStart.getTime() && eDate.getTime() <= weekEnd.getTime();
 
-      const updateMetric = (target: typeof initialMetric) => {
+      const updateMetric = (target: typeof initialMetric, isStartDay: boolean, overlapMins: number) => {
         // Routine Aggregations
-        if (e.type === EventType.FEED) {
+        if (e.type === EventType.FEED && isStartDay) {
           const method = e.details?.method;
           
           if (method === 'solid') {
@@ -76,38 +97,32 @@ const ConsolidatedReport: React.FC<ReportProps> = ({ events, selectedDate }) => 
               target.bottleVol += e.details.amountml;
             }
           }
-        } else if (e.type === EventType.DIAPER) {
+        } else if (e.type === EventType.DIAPER && isStartDay) {
           const isDirty = e.details?.status === 'dirty' || e.details?.status === 'mixed';
           isDirty ? target.dirty++ : target.wet++;
         } else if (e.type === EventType.SLEEP) {
-          // Count
-          target.sleepCount++;
-
-          // Duration
-          if (e.endTime) {
-            const start = new Date(e.startTime).getTime();
-            const end = new Date(e.endTime).getTime();
-            const mins = Math.round((end - start) / 60000);
-            target.sleepDur += mins;
+          // Count only on the day it started
+          if (isStartDay) {
+            target.sleepCount++;
           }
+          // Duration based on exact overlap
+          target.sleepDur += overlapMins;
         }
       };
 
-      if (isToday) updateMetric(metrics.today);
-      if (isYesterday) updateMetric(metrics.yesterday);
-      if (isThisWeek) updateMetric(metrics.weekTotal);
+      // Calculate overlaps
+      const todayOverlap = e.endTime ? getOverlapMinutes(eStart, eEnd, today.getTime(), todayEnd.getTime()) : 0;
+      const yesterdayOverlap = e.endTime ? getOverlapMinutes(eStart, eEnd, yesterday.getTime(), yesterdayEnd.getTime()) : 0;
+      const weekOverlap = e.endTime ? getOverlapMinutes(eStart, eEnd, weekStart.getTime(), weekEnd.getTime()) : 0;
 
-      // Gather Health Log Data (Symptoms & Temps)
-      if (isLast30Days) {
-         if (e.type === EventType.SYMPTOM) {
-           metrics.healthLog.push(e);
-         }
-         // Include High Temp or just general temp checks? Let's include all temps for context
-         if (e.type === EventType.MEASUREMENT && (e.details as any).type === 'temperature') {
-           metrics.healthLog.push(e);
-         }
-      }
+      if (isTodayStart || todayOverlap > 0) updateMetric(metrics.today, isTodayStart, todayOverlap);
+      if (isYesterdayStart || yesterdayOverlap > 0) updateMetric(metrics.yesterday, isYesterdayStart, yesterdayOverlap);
+      if (isThisWeekStart || weekOverlap > 0) updateMetric(metrics.weekTotal, isThisWeekStart, weekOverlap);
     });
+
+    // Gather Health Log Data (Symptoms & Temps) from healthEvents
+    const sortedHealth = [...healthEvents].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+    metrics.healthLog = sortedHealth;
 
     return {
       metrics,
