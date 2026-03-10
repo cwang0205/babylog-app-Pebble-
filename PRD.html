@@ -288,5 +288,57 @@
         <li>Calculates DOM element positions (`getBoundingClientRect`) to create a "spotlight" effect on specific buttons.</li>
     </ul>
 
+    <h2>6. Recent Technical Updates & Optimizations</h2>
+    
+    <h3>A. Mobile Date Picker Reliability</h3>
+    <p>Fixed an issue where the native date picker would not consistently open on mobile browsers (specifically iOS Safari).</p>
+    <ul>
+        <li><strong>Fix:</strong> The invisible <code>&lt;input type="date"&gt;</code> was forced to stretch to the exact dimensions of its container (<code>w-full h-full</code>) and pulled to the front layer (<code>z-10</code>).</li>
+        <li><strong>Fallback:</strong> Added an <code>onClick</code> handler that explicitly calls <code>showPicker()</code> on the input element to force the native UI to open.</li>
+    </ul>
+
+    <h3>B. 30-Day Health Log (Optimized Querying)</h3>
+    <p>The Health Log (Symptoms and Measurements) now operates on a separate, optimized 30-day timeline independent of the main 14-day dashboard view.</p>
+    
+    <div class="flow-container" style="border-left-color: var(--charcoal);">
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--charcoal);">1</div>
+            <div class="step-content">
+                <strong>Independent Subscription</strong>: A dedicated <code>onSnapshot</code> listener fetches only <code>symptom</code> and <code>measurement</code> events for the last 30 days.
+                <span class="tech-ref">Service: <code>StorageService.subscribeToHealthEvents</code></span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--charcoal);">2</div>
+            <div class="step-content">
+                <strong>Read Optimization</strong>: This query runs <strong>exactly once</strong> when the app loads or the active baby changes. It does <em>not</em> re-run when the user navigates through different dates on the main timeline, saving significant Firestore document reads.
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--charcoal);">3</div>
+            <div class="step-content">
+                <strong>Required Firestore Index (Manual Step)</strong>: Because this query filters by both <code>type</code> and <code>startTime</code>, Firestore requires a composite index.
+                <br><br>
+                <div style="background: #fff3cd; border: 1px solid #ffe69c; padding: 10px; border-radius: 4px; font-size: 0.9em; color: #664d03;">
+                    <strong>Action Required:</strong> You must manually create this index in the Firebase Console. The app will log the exact creation URL in the browser console if the index is missing.
+                    <br><strong>Index Fields:</strong> <code>babyId</code> (Ascending), <code>type</code> (Ascending), <code>startTime</code> (Ascending).
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3>C. Overnight Sleep Splitting (Analysis Engine)</h3>
+    <p>The <code>ConsolidatedReport</code> engine was rewritten to accurately calculate sleep durations that cross the midnight boundary.</p>
+    <ul>
+        <li><strong>Previous Behavior:</strong> A sleep from 8 PM to 6 AM was credited entirely (10 hours) to the day it started.</li>
+        <li><strong>New Behavior:</strong> The engine calculates the <em>exact overlap</em> of the sleep session with the calendar day. 
+            <ul>
+                <li>Day 1 receives 4 hours (8 PM to Midnight).</li>
+                <li>Day 2 receives 6 hours (Midnight to 6 AM).</li>
+            </ul>
+        </li>
+        <li><strong>Sleep Count:</strong> The total number of sleep sessions (count) is still credited to the day the sleep initiated.</li>
+    </ul>
+
 </body>
 </html>

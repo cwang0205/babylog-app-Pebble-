@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { AuthService } from './services/authService';
 import { StorageService } from './services/storageService';
@@ -45,6 +45,7 @@ function App() {
   const [healthEvents, setHealthEvents] = useState<BabyEvent[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const datePickerRef = useRef<HTMLInputElement>(null);
   
   // Date range for fetching events (default to last 14 days)
   const [dateRange, setDateRange] = useState(() => {
@@ -685,34 +686,38 @@ function App() {
              <button onClick={() => handleDateChange(-1)} className="p-2 hover:bg-subtle rounded-lg text-charcoal/60">
                 <ChevronLeftIcon className="w-5 h-5" />
              </button>
-             <div className="px-4 py-2 min-w-[140px] text-center relative">
-                <span className="block text-xs font-bold uppercase text-charcoal/40 tracking-wider">Viewing</span>
-                <label className="flex items-center justify-center gap-1.5 font-bold text-charcoal cursor-pointer hover:text-rust transition-colors relative">
+             <div 
+                className="px-4 py-2 min-w-[140px] text-center relative group cursor-pointer"
+                onClick={() => {
+                  try {
+                    if (datePickerRef.current && 'showPicker' in HTMLInputElement.prototype) {
+                      datePickerRef.current.showPicker();
+                    }
+                  } catch (err) {
+                    // ignore
+                  }
+                }}
+             >
+                <input 
+                  ref={datePickerRef}
+                  type="date" 
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  value={selectedDate.toISOString().split('T')[0]}
+                  min={currentBaby ? new Date(currentBaby.birthDate).toISOString().split('T')[0] : undefined}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const [year, month, day] = e.target.value.split('-');
+                      setSelectedDate(new Date(Number(year), Number(month) - 1, Number(day)));
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="block text-xs font-bold uppercase text-charcoal/40 tracking-wider pointer-events-none">Viewing</span>
+                <div className="flex items-center justify-center gap-1.5 font-bold text-charcoal group-hover:text-rust transition-colors pointer-events-none">
                   {selectedDate.toDateString() === new Date().toDateString() ? 'Today' : selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   <CalendarIcon className="w-4 h-4 text-charcoal/40" />
-                  <input 
-                    type="date" 
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                    value={selectedDate.toISOString().split('T')[0]}
-                    min={currentBaby ? new Date(currentBaby.birthDate).toISOString().split('T')[0] : undefined}
-                    max={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        const [year, month, day] = e.target.value.split('-');
-                        setSelectedDate(new Date(Number(year), Number(month) - 1, Number(day)));
-                      }
-                    }}
-                    onClick={(e) => {
-                      try {
-                        if ('showPicker' in HTMLInputElement.prototype) {
-                          (e.target as HTMLInputElement).showPicker();
-                        }
-                      } catch (err) {
-                        // ignore
-                      }
-                    }}
-                  />
-                </label>
+                </div>
              </div>
              <button onClick={() => handleDateChange(1)} className="p-2 hover:bg-subtle rounded-lg text-charcoal/60">
                 <ChevronRightIcon className="w-5 h-5" />
