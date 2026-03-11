@@ -101,8 +101,8 @@ const ConsolidatedReport: React.FC<ReportProps> = ({ events, healthEvents = [], 
           const isDirty = e.details?.status === 'dirty' || e.details?.status === 'mixed';
           isDirty ? target.dirty++ : target.wet++;
         } else if (e.type === EventType.SLEEP) {
-          // Count only on the day it started
-          if (isStartDay) {
+          // Count if it overlaps with the target day, or if it's an ongoing sleep that started today
+          if (overlapMins > 0 || isStartDay) {
             target.sleepCount++;
           }
           // Duration based on exact overlap

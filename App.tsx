@@ -47,12 +47,12 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const datePickerRef = useRef<HTMLInputElement>(null);
   
-  // Date range for fetching events (default to last 14 days)
+  // Date range for fetching events (default to past 7 days + current day = 8 days total)
   const [dateRange, setDateRange] = useState(() => {
     const end = new Date();
     end.setHours(23, 59, 59, 999);
     const start = new Date();
-    start.setDate(start.getDate() - 14);
+    start.setDate(start.getDate() - 7);
     start.setHours(0, 0, 0, 0);
     return { start, end };
   });
@@ -60,18 +60,12 @@ function App() {
   // Adjust date range if selectedDate falls outside of it
   useEffect(() => {
     if (selectedDate < dateRange.start || selectedDate > dateRange.end) {
-      const newStart = new Date(Math.min(selectedDate.getTime(), dateRange.start.getTime()));
-      const newEnd = new Date(Math.max(selectedDate.getTime(), dateRange.end.getTime()));
-
-      if (selectedDate < dateRange.start) {
-        newStart.setDate(newStart.getDate() - 7);
-        newStart.setHours(0, 0, 0, 0);
-      }
+      const newEnd = new Date(selectedDate);
+      newEnd.setHours(23, 59, 59, 999);
       
-      if (selectedDate > dateRange.end) {
-        newEnd.setDate(newEnd.getDate() + 7);
-        newEnd.setHours(23, 59, 59, 999);
-      }
+      const newStart = new Date(selectedDate);
+      newStart.setDate(newStart.getDate() - 7);
+      newStart.setHours(0, 0, 0, 0);
       
       setDateRange({ start: newStart, end: newEnd });
     }
@@ -80,11 +74,26 @@ function App() {
   const [filterCategory, setFilterCategory] = useState<FilterCategory>(null);
   
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [pendingEvent, setPendingEvent] = useState<ParseResult | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   
   // Onboarding / Baby Creation State
   const [showAddBaby, setShowAddBaby] = useState(false);
+
+  // Track network status for offline support
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [isCreatingBaby, setIsCreatingBaby] = useState(false); // New loading state for baby creation
   const [newBabyName, setNewBabyName] = useState('');
   const [newBabyDate, setNewBabyDate] = useState(new Date().toISOString().split('T')[0]);
@@ -282,6 +291,11 @@ function App() {
   };
 
   const processInput = async (text?: string, audioBlob?: Blob) => {
+    if (isOffline) {
+      alert("You are currently offline. Voice logging requires an internet connection to process. Please try again when connected.");
+      return;
+    }
+
     setIsProcessing(true);
     try {
       let result: ParseResult;
@@ -569,6 +583,12 @@ function App() {
         paddingRight: 'var(--sar, 0)'
       }}
     >
+      {isOffline && (
+        <div className="bg-rust text-white text-xs font-bold text-center py-1.5 px-4 z-50 shadow-sm flex items-center justify-center gap-2">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" /></svg>
+          Offline Mode: Viewing cached data. Voice logging disabled.
+        </div>
+      )}
       
       {/* 1. Header & Hero */}
       <div className="bg-cream px-6 pt-8 pb-4 max-w-5xl mx-auto w-full">

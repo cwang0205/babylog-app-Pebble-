@@ -340,5 +340,46 @@
         <li><strong>Sleep Count:</strong> The total number of sleep sessions (count) is still credited to the day the sleep initiated.</li>
     </ul>
 
+    <h2>7. Offline Capabilities & Capacitor Integration</h2>
+    <p>To support iOS App Store requirements and ensure graceful degradation, the app utilizes Firestore's built-in offline persistence. This allows the React app (running inside a Capacitor WebView) to function when the device loses network connectivity.</p>
+
+    <h3>A. Core Offline Flow</h3>
+    <div class="flow-container" style="border-left-color: var(--sage);">
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--sage);">1</div>
+            <div class="step-content">
+                <strong>Initialization</strong>: Firestore is initialized with <code>persistentLocalCache</code>. This stores recently loaded documents in the device's local IndexedDB.
+                <span class="tech-ref">Service: <code>firebase.ts</code> | API: <code>initializeFirestore(app, { localCache: persistentLocalCache(...) })</code></span>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--sage);">2</div>
+            <div class="step-content">
+                <strong>Offline Data Flow (Reads)</strong>: When the user opens the app without a network connection, the existing <code>onSnapshot</code> listeners automatically serve data from the local IndexedDB cache. The UI renders the last-known state seamlessly.
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--sage);">3</div>
+            <div class="step-content">
+                <strong>Offline Data Flow (Writes)</strong>: If the user manually logs an event (via the manual entry forms), Firestore queues the write operation locally. The UI updates immediately (optimistic UI), and the SDK automatically syncs the queued writes to the cloud once the connection is restored.
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-num" style="background: var(--sage);">4</div>
+            <div class="step-content">
+                <strong>Graceful Degradation (AI Logging)</strong>: Because the Gemini LLM API requires a network connection, voice AI logging is disabled while offline. The app listens to the browser's <code>online</code> and <code>offline</code> events to display a sticky warning banner and block AI processing attempts with a clear alert.
+                <span class="tech-ref">Component: <code>App.tsx</code> | State: <code>isOffline</code></span>
+            </div>
+        </div>
+    </div>
+
+    <h3>B. Advanced Sync & Cache Behavior</h3>
+    <ul>
+        <li><strong>Multi-Device Sync (e.g., Co-parenting):</strong> The <code>onSnapshot</code> listener acts as a highly intelligent traffic controller. It immediately grabs data from the Local Cache so the screen loads instantly, then connects to the Cloud to check for any changes. If multiple users (e.g., Mom and Dad) are online, a change made by one is instantly pushed to the other's listener.</li>
+        <li><strong>Conflict Resolution (Last Write Wins):</strong> If two offline devices edit the <em>exact same event</em> (e.g., Mom changes a diaper log to "Wet", Dad changes it to "Dirty"), the device that reconnects to the internet <em>last</em> will overwrite the other based on server timestamps. If they create <em>new</em> independent events offline, both are safely added to the timeline upon reconnection without glitches.</li>
+        <li><strong>Delta Syncing (Mutation Queue):</strong> When offline, Firestore does not save the final state of the database; it creates a hidden queue of specific mutations (e.g., Action 1: Added feeding, Action 2: Deleted sleep). Upon reconnection, it silently replays <em>only that specific queue of actions</em> to the cloud in a fraction of a second. It does not re-upload the entire dataset, saving bandwidth and battery.</li>
+        <li><strong>Cache Limits & Garbage Collection:</strong> The default local cache size is <strong>40 MB</strong>, which can hold years of text-based JSON baby logs. If the cache ever exceeds this limit, Firestore uses a Least Recently Used (LRU) garbage collector to silently remove the oldest, least-viewed data from the local device's memory to make room for new data (this does not delete data from the cloud).</li>
+    </ul>
+
 </body>
 </html>

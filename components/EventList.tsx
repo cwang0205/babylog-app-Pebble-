@@ -71,22 +71,47 @@ const EventList: React.FC<EventListProps> = ({ events, selectedDate, filterCateg
 
   // 2. Filter by Selected Date AND Filter Category
   const dayEvents = useMemo(() => {
-    const targetStr = selectedDate.toDateString();
+    const targetStart = new Date(selectedDate);
+    targetStart.setHours(0, 0, 0, 0);
+    const targetEnd = new Date(selectedDate);
+    targetEnd.setHours(23, 59, 59, 999);
     
-    return sortedEvents.filter(e => {
-      // Date Check
-      if (new Date(e.startTime).toDateString() !== targetStr) return false;
+    const processedEvents: (BabyEvent & { originalEvent?: BabyEvent })[] = [];
 
+    sortedEvents.forEach(e => {
       // Category Check
-      if (!filterCategory) return true;
-      if (filterCategory === 'feed') return e.type === EventType.FEED;
-      if (filterCategory === 'sleep') return e.type === EventType.SLEEP;
-      if (filterCategory === 'diaper') return e.type === EventType.DIAPER;
-      if (filterCategory === 'wellness') {
-        return [EventType.SYMPTOM, EventType.MEASUREMENT, EventType.MOVEMENT, EventType.NOTE].includes(e.type);
+      if (filterCategory) {
+        if (filterCategory === 'feed' && e.type !== EventType.FEED) return;
+        if (filterCategory === 'sleep' && e.type !== EventType.SLEEP) return;
+        if (filterCategory === 'diaper' && e.type !== EventType.DIAPER) return;
+        if (filterCategory === 'wellness' && ![EventType.SYMPTOM, EventType.MEASUREMENT, EventType.MOVEMENT, EventType.NOTE].includes(e.type)) return;
       }
-      return true;
+
+      const eStart = new Date(e.startTime);
+      const eEnd = e.endTime ? new Date(e.endTime) : eStart;
+
+      if (e.type === EventType.SLEEP && e.endTime) {
+        // Check if sleep overlaps with the selected date
+        if (eStart <= targetEnd && eEnd >= targetStart) {
+          const displayStart = eStart < targetStart ? targetStart : eStart;
+          const displayEnd = eEnd > targetEnd ? targetEnd : eEnd;
+          
+          processedEvents.push({
+            ...e,
+            startTime: displayStart.toISOString(),
+            endTime: displayEnd.toISOString(),
+            originalEvent: e
+          });
+        }
+      } else {
+        // For non-sleep events, or ongoing sleeps, only show if they started on this day
+        if (eStart >= targetStart && eStart <= targetEnd) {
+          processedEvents.push(e);
+        }
+      }
     });
+
+    return processedEvents.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
   }, [sortedEvents, selectedDate, filterCategory]);
 
   if (dayEvents.length === 0) {
@@ -105,7 +130,7 @@ const EventList: React.FC<EventListProps> = ({ events, selectedDate, filterCateg
   return (
     <div className="space-y-4 pb-32">
       {dayEvents.map((event) => (
-        <div key={event.id} onClick={() => onEditEvent(event)} className="relative group cursor-pointer">
+        <div key={`${event.id}-${event.startTime}`} onClick={() => onEditEvent(event.originalEvent || event)} className="relative group cursor-pointer">
            <div className="group bg-surface p-5 rounded-2xl shadow-sm border border-transparent hover:border-rust/20 hover:shadow-md transition-all flex items-center gap-5 relative z-0">
             
             {/* Icon Box */}

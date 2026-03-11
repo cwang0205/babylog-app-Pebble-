@@ -76,8 +76,10 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
   
   // 1. Calculate Daily Stats (Filtered by Selected Date)
   const stats = useMemo(() => {
-    const targetDateStr = selectedDate.toDateString();
-    const dayEvents = events.filter(e => new Date(e.startTime).toDateString() === targetDateStr);
+    const targetStart = new Date(selectedDate);
+    targetStart.setHours(0, 0, 0, 0);
+    const targetEnd = new Date(selectedDate);
+    targetEnd.setHours(23, 59, 59, 999);
 
     let milkVol = 0;
     let milkCount = 0;
@@ -92,9 +94,24 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
     let wellnessCount = 0;
     let hasSymptom = false;
 
-    dayEvents.forEach(e => {
+    const getOverlapMinutes = (startMs: number, endMs: number, dayStartMs: number, dayEndMs: number) => {
+      const overlapStart = Math.max(startMs, dayStartMs);
+      const overlapEnd = Math.min(endMs, dayEndMs);
+      if (overlapStart < overlapEnd) {
+        return Math.round((overlapEnd - overlapStart) / 60000);
+      }
+      return 0;
+    };
+
+    events.forEach(e => {
+      const eStart = new Date(e.startTime).getTime();
+      const eEnd = e.endTime ? new Date(e.endTime).getTime() : eStart;
+      
+      const isStartDay = eStart >= targetStart.getTime() && eStart <= targetEnd.getTime();
+      const overlapMins = e.endTime ? getOverlapMinutes(eStart, eEnd, targetStart.getTime(), targetEnd.getTime()) : 0;
+
       // FEEDS
-      if (e.type === EventType.FEED) {
+      if (e.type === EventType.FEED && isStartDay) {
          const method = e.details?.method;
          if (method === 'solid') {
            solidCount++;
@@ -104,7 +121,7 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
          }
       } 
       // DIAPERS
-      else if (e.type === EventType.DIAPER) {
+      else if (e.type === EventType.DIAPER && isStartDay) {
          if (e.details?.status === 'dirty' || e.details?.status === 'mixed') {
            dirtyCount++;
          } else {
@@ -113,15 +130,13 @@ const Dashboard: React.FC<DashboardProps> = ({ events, selectedDate, activeFilte
       } 
       // SLEEP
       else if (e.type === EventType.SLEEP) {
-         sleepCount++; 
-         if (e.endTime) {
-            const start = new Date(e.startTime).getTime();
-            const end = new Date(e.endTime).getTime();
-            sleepMinutes += (end - start) / 60000;
+         if (overlapMins > 0 || isStartDay) {
+           sleepCount++;
          }
+         sleepMinutes += overlapMins;
       } 
       // WELLNESS
-      else {
+      else if (isStartDay && [EventType.SYMPTOM, EventType.MEASUREMENT, EventType.MOVEMENT, EventType.NOTE].includes(e.type)) {
         wellnessCount++;
         if (e.type === EventType.SYMPTOM) hasSymptom = true;
       }
